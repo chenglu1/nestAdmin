@@ -1,0 +1,13 @@
+# nixpacks 配置 - 用于构建 React + Vite 应用
+
+[phases.setup]
+nixPkgs = ["nodejs-18_x"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npx serve -s dist -l $PORT"

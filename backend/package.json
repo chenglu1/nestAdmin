@@ -4,7 +4,7 @@
   "description": "NestJS Backend for Admin System",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "nest build",
     "start": "ts-node src/main.ts",
     "start:dev": "nodemon --exec ts-node src/main.ts",
     "start:debug": "nodemon --exec node --inspect=0.0.0.0:9229 -r ts-node/register src/main.ts",
