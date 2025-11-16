@@ -1,0 +1,169 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+input CreateMenuInput {
+  component: String
+  icon: String
+  name: String!
+  parentId: Int
+  path: String
+  sort: Int! = 0
+  status: Int! = 1
+  type: Int! = 1
+}
+
+input CreateRoleInput {
+  code: String!
+  description: String
+  name: String!
+  status: Int! = 1
+}
+
+input CreateUserInput {
+  email: String
+  nickname: String
+  password: String!
+  status: Int! = 1
+  username: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type LoginResponse {
+  accessToken: String!
+  user: UserModel!
+}
+
+type MenuModel {
+  children: [MenuModel!]
+  component: String
+  createdAt: DateTime!
+  icon: String
+  id: Int!
+  name: String!
+  parentId: Int
+  path: String
+  sort: Int!
+  status: Int!
+  type: Int!
+  updatedAt: DateTime!
+}
+
+type Mutation {
+  """为角色分配菜单权限"""
+  assignMenusToRole(menuIds: [Int!]!, roleId: Int!): Boolean!
+
+  """为用户分配角色"""
+  assignRolesToUser(roleIds: [Int!]!, userId: Int!): Boolean!
+
+  """创建菜单"""
+  createMenu(input: CreateMenuInput!): MenuModel!
+
+  """创建角色"""
+  createRole(input: CreateRoleInput!): RoleModel!
+
+  """创建新用户"""
+  createUser(input: CreateUserInput!): UserModel!
+
+  """删除菜单"""
+  deleteMenu(id: Int!): Boolean!
+
+  """删除角色"""
+  deleteRole(id: Int!): Boolean!
+
+  """删除用户"""
+  deleteUser(id: Int!): Boolean!
+
+  """用户登录"""
+  login(password: String!, username: String!): LoginResponse!
+
+  """更新菜单"""
+  updateMenu(id: Int!, input: UpdateMenuInput!): MenuModel!
+
+  """更新角色"""
+  updateRole(id: Int!, input: UpdateRoleInput!): RoleModel!
+
+  """更新用户信息"""
+  updateUser(id: Int!, input: UpdateUserInput!): UserModel!
+}
+
+type Query {
+  """获取当前登录用户信息"""
+  currentUser: UserModel!
+
+  """获取菜单列表(平铺)"""
+  menuList: [MenuModel!]!
+
+  """获取树形菜单结构"""
+  menuTree: [MenuModel!]!
+
+  """根据ID获取角色信息"""
+  role(id: Int!): RoleModel!
+
+  """获取角色的菜单ID列表"""
+  roleMenus(roleId: Int!): [Int!]!
+
+  """获取所有角色列表"""
+  roles: [RoleModel!]!
+
+  """根据ID获取用户信息"""
+  user(id: Int!): UserModel!
+
+  """获取用户的菜单权限"""
+  userMenus(userId: Int!): [MenuModel!]!
+
+  """获取用户的角色ID列表"""
+  userRoles(userId: Int!): [Int!]!
+
+  """获取所有用户列表"""
+  users: [UserModel!]!
+}
+
+type RoleModel {
+  code: String!
+  createdAt: DateTime!
+  description: String
+  id: Int!
+  menus: [MenuModel!]
+  name: String!
+  status: Int!
+  updatedAt: DateTime!
+}
+
+input UpdateMenuInput {
+  component: String
+  icon: String
+  name: String
+  parentId: Int
+  path: String
+  sort: Int
+  status: Int
+  type: Int
+}
+
+input UpdateRoleInput {
+  description: String
+  name: String
+  status: Int
+}
+
+input UpdateUserInput {
+  email: String
+  nickname: String
+  password: String
+  status: Int
+}
+
+type UserModel {
+  createdAt: DateTime!
+  email: String
+  id: Int!
+  nickname: String
+  status: Int!
+  updatedAt: DateTime!
+  username: String!
+}

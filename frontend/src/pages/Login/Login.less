@@ -1,0 +1,21 @@
+@import '../../styles/variables.less';
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card {
+  width: 400px;
+  box-shadow: @box-shadow-base;
+  border-radius: @border-radius-base;
+
+  .ant-card-head-title {
+    text-align: center;
+    font-size: @font-size-lg + 8px;
+    font-weight: bold;
+  }
+}

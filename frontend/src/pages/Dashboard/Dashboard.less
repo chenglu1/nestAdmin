@@ -1,0 +1,33 @@
+@import '../../styles/variables.less';
+
+.dashboard {
+  :global {
+    .ant-card {
+      border-radius: 8px;
+      box-shadow: @shadow-1-down;
+      margin-bottom: @padding-lg;
+
+      .ant-card-head {
+        border-bottom: 1px solid @border-color-split;
+        font-weight: 600;
+      }
+
+      .ant-descriptions-item-label {
+        font-weight: 500;
+        color: @text-color-secondary;
+      }
+
+      .ant-descriptions-item-content {
+        color: @text-color;
+      }
+    }
+
+    .system-info {
+      p {
+        font-size: @font-size-base + 2px;
+        line-height: 2;
+        margin: 0;
+      }
+    }
+  }
+}

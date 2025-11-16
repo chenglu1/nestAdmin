@@ -1,0 +1,41 @@
+import request from '@/utils/request';
+
+// 获取角色列表
+export const getRoleList = () => {
+  return request.get('/role/list');
+};
+
+// 创建角色
+export const createRole = (data: any) => {
+  return request.post('/role', data);
+};
+
+// 更新角色
+export const updateRole = (id: number, data: any) => {
+  return request.put(`/role/${id}`, data);
+};
+
+// 删除角色
+export const deleteRole = (id: number) => {
+  return request.delete(`/role/${id}`);
+};
+
+// 给角色分配菜单权限
+export const assignMenusToRole = (roleId: number, menuIds: number[]) => {
+  return request.post(`/role/${roleId}/menus`, { menuIds });
+};
+
+// 获取角色的菜单权限
+export const getRoleMenus = (roleId: number) => {
+  return request.get(`/role/${roleId}/menus`);
+};
+
+// 给用户分配角色
+export const assignRolesToUser = (userId: number, roleIds: number[]) => {
+  return request.post(`/user/${userId}/roles`, { roleIds });
+};
+
+// 获取用户的角色
+export const getUserRoles = (userId: number) => {
+  return request.get(`/user/${userId}/roles`);
+};
