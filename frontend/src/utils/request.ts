@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { message } from 'antd';
 
+// 根据环境使用不同的API地址
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 // 创建 axios 实例
 const request = axios.create({
-  baseURL: 'http://localhost:3000', // 后端 API 地址
+  baseURL: API_BASE_URL, // 后端 API 地址
   timeout: 10000,
 });
 
