@@ -38,7 +38,18 @@ export class LogController {
   })
   @ApiResponse({ status: 200, description: '查询成功' })
   async findAll(@Query() queryDto: QueryLogDto) {
-    return await this.logService.findAll(queryDto);
+    const result = await this.logService.findAll(queryDto);
+    return {
+      code: 200,
+      data: {
+        list: result.list,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
+      message: '获取成功',
+    };
   }
 
   @Get(':id')
