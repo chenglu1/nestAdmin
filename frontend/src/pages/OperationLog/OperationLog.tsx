@@ -57,9 +57,9 @@ const OperationLog: React.FC = () => {
         limit,
       };
       const res = await getLogList(params);
-      setDataSource(res.list);
-      setTotal(res.total);
-      setCurrentPage(res.page);
+      setDataSource(res.data.list);
+      setTotal(res.data.total);
+      setCurrentPage(res.data.page);
     } catch (error) {
       message.error('获取日志列表失败');
     } finally {

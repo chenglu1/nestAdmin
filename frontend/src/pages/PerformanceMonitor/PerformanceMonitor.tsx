@@ -23,7 +23,7 @@ const { RangePicker } = DatePicker;
 const PerformanceMonitor: React.FC = () => {
   const [stats, setStats] = useState<PerformanceStats | null>(null);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesData[]>([]);
-  const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
+  const [, setMetrics] = useState<PerformanceMetric[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
 
