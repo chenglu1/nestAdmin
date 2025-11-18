@@ -6,6 +6,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // 设置全局前缀
+  app.setGlobalPrefix('api');
+  
   // 启用全局验证管道
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
