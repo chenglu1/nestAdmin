@@ -14,7 +14,7 @@ async function bootstrap() {
 
   // 启用 CORS,允许前端访问
   app.enableCors({
-    origin: 'http://localhost:5173', // React 开发服务器地址
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173', 'http://118.89.79.13'],
     credentials: true,
   });
 
