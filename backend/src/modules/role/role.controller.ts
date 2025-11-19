@@ -38,7 +38,7 @@ export class RoleController {
         data: role,
         message: '创建成功',
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
         code: 400,
         message: error.message,
@@ -73,7 +73,7 @@ export class RoleController {
         code: 200,
         message: '删除成功',
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
         code: 400,
         message: error.message,

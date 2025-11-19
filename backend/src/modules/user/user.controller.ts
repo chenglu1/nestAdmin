@@ -19,7 +19,7 @@ export class UserController {
   async register(@Body() createUserDto: CreateUserDto) {
     const user = await this.userService.create(createUserDto);
     // 不返回密码
-    const { password, ...result } = user;
+    const { password, ...result } = user as any;
     return {
       code: 200,
       message: '注册成功',
@@ -33,8 +33,11 @@ export class UserController {
   @ApiOperation({ summary: '获取当前用户信息' })
   @ApiResponse({ status: 200, description: '获取成功' })
   @ApiResponse({ status: 401, description: '未授权' })
-  async getProfile(@Request() req) {
+  async getProfile(@Request() req: any) {
     const user = await this.userService.findById(req.user.userId);
+    if (!user) {
+      return { code: 404, message: '用户不存在' };
+    }
     const { password, ...result } = user;
     return {
       code: 200,

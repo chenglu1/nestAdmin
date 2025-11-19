@@ -58,7 +58,7 @@ export class LogService {
   /**
    * 根据ID查询操作日志详情
    */
-  async findOne(id: number): Promise<OperationLog> {
+  async findOne(id: number): Promise<OperationLog | null> {
     return await this.operationLogRepository.findOne({ where: { id } });
   }
 

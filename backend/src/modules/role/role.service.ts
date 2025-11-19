@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { CreateRoleDto, UpdateRoleDto } from './dto/role.dto';
 
@@ -19,7 +19,7 @@ export class RoleService {
   }
 
   // 根据ID获取角色
-  async findOne(id: number): Promise<Role> {
+  async findOne(id: number): Promise<Role | null> {
     return this.roleRepository.findOne({ where: { id } });
   }
 
@@ -38,6 +38,9 @@ export class RoleService {
   async remove(id: number): Promise<void> {
     // 检查是否是系统角色
     const role = await this.findOne(id);
+    if (!role) {
+      throw new Error('角色不存在');
+    }
     if (role.code === 'admin') {
       throw new Error('系统角色不能删除');
     }
@@ -72,7 +75,7 @@ export class RoleService {
       'SELECT menu_id FROM role_menus WHERE role_id = ?',
       [roleId]
     );
-    return result.map(item => item.menu_id);
+    return result.map((item: any) => item.menu_id);
   }
 
   // 给用户分配角色
@@ -95,6 +98,6 @@ export class RoleService {
       'SELECT role_id FROM user_roles WHERE user_id = ?',
       [userId]
     );
-    return result.map(item => item.role_id);
+    return result.map((item: any) => item.role_id);
   }
 }

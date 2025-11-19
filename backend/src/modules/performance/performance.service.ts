@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository } from 'typeorm';
 import { PerformanceMetric } from './entities/performance-metric.entity';
 import { CreatePerformanceMetricDto, QueryPerformanceDto } from './dto/performance.dto';
 
@@ -111,7 +111,7 @@ export class PerformanceService {
         ? ((stats.errorCount / stats.totalRequests) * 100).toFixed(2)
         : '0.00',
       statusCodeDistribution,
-      slowEndpoints: slowEndpoints.map(item => ({
+      slowEndpoints: slowEndpoints.map((item: any) => ({
         ...item,
         avgResponseTime: parseFloat(item.avgResponseTime).toFixed(2),
         count: parseInt(item.count),
@@ -135,7 +135,7 @@ export class PerformanceService {
       .orderBy('time', 'ASC')
       .getRawMany();
 
-    return data.map(item => ({
+    return data.map((item: any) => ({
       time: item.time,
       avgResponseTime: parseFloat(item.avgResponseTime || 0).toFixed(2),
       requestCount: parseInt(item.requestCount || 0),

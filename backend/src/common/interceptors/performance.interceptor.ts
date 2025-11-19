@@ -8,6 +8,25 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { PerformanceService } from '../../modules/performance/performance.service';
+import { getClientIp } from '../utils/ip.util';
+
+const SLOW_REQUEST_THRESHOLD = 1000; // 毫秒
+
+interface PerformanceMetrics {
+  method: string;
+  path: string;
+  statusCode: number;
+  responseTime: number;
+  requestSize: number;
+  responseSize: number;
+  ipAddress: string;
+  userAgent: string;
+  userId?: number;
+  username?: string;
+  cpuUsage?: number;
+  memoryUsage?: number;
+  errorMessage?: string;
+}
 
 @Injectable()
 export class PerformanceInterceptor implements NestInterceptor {
@@ -17,101 +36,104 @@ export class PerformanceInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
-    
-    const { method, originalUrl, headers, ip, body, query, params } = request;
-    const userAgent = headers['user-agent'] || '';
-    const user = request.user; // JWT 用户信息
-
+    const { method, originalUrl, body, query, params } = request;
+    const user = request.user;
     const startTime = Date.now();
     const startMemory = process.memoryUsage();
     const startCpu = process.cpuUsage();
 
     return next.handle().pipe(
-      tap(async (data) => {
-        const endTime = Date.now();
-        const responseTime = endTime - startTime;
-        
-        // 计算资源使用
-        const endMemory = process.memoryUsage();
-        const endCpu = process.cpuUsage(startCpu);
-        const memoryUsed = endMemory.heapUsed - startMemory.heapUsed;
-        const cpuUsed = (endCpu.user + endCpu.system) / 1000; // 微秒转毫秒
-
-        // 计算请求/响应大小
-        const requestSize = JSON.stringify({ body, query, params }).length;
-        const responseSize = JSON.stringify(data).length;
-
-        try {
-          // 记录性能数据
-          await this.performanceService.create({
-            method,
-            path: originalUrl,
-            statusCode: response.statusCode,
-            responseTime,
-            requestSize,
-            responseSize,
-            ipAddress: this.getClientIp(request),
-            userAgent,
-            userId: user?.userId,
-            username: user?.username,
-            cpuUsage: parseFloat(cpuUsed.toFixed(2)),
-            memoryUsage: memoryUsed,
-          });
-
-          // 慢查询告警 (>1秒)
-          if (responseTime > 1000) {
-            this.logger.warn(
-              `慢请求告警: ${method} ${originalUrl} - ${responseTime}ms`,
-            );
-          }
-        } catch (error) {
-          this.logger.error('保存性能数据失败:', error);
-        }
+      tap((data) => {
+        const metrics = this.buildMetrics(
+          method,
+          originalUrl,
+          200,
+          Date.now() - startTime,
+          { body, query, params },
+          JSON.stringify(data).length,
+          request,
+          user,
+          startMemory,
+          startCpu,
+        );
+        this.saveMetrics(metrics);
+        this.checkSlowRequest(metrics);
       }),
-      catchError(async (error) => {
-        const endTime = Date.now();
-        const responseTime = endTime - startTime;
-
-        try {
-          await this.performanceService.create({
-            method,
-            path: originalUrl,
-            statusCode: error.status || 500,
-            responseTime,
-            requestSize: JSON.stringify({ body, query, params }).length,
-            responseSize: 0,
-            ipAddress: this.getClientIp(request),
-            userAgent,
-            userId: user?.userId,
-            username: user?.username,
-            errorMessage: error.message,
-          });
-        } catch (logError) {
-          this.logger.error('保存错误性能数据失败:', logError);
-        }
-
+      catchError((error) => {
+        const metrics = this.buildMetrics(
+          method,
+          originalUrl,
+          error.status || 500,
+          Date.now() - startTime,
+          { body, query, params },
+          0,
+          request,
+          user,
+          startMemory,
+          startCpu,
+          error.message,
+        );
+        this.saveMetrics(metrics);
         return throwError(() => error);
       }),
     );
   }
 
-  private getClientIp(request: any): string {
-    const xForwardedFor = request.headers['x-forwarded-for'];
-    if (xForwardedFor) {
-      return xForwardedFor.split(',')[0].trim();
+  /**
+   * 构建性能指标
+   */
+  private buildMetrics(
+    method: string,
+    path: string,
+    statusCode: number,
+    responseTime: number,
+    requestData: any,
+    responseSize: number,
+    request: any,
+    user: any,
+    startMemory: NodeJS.MemoryUsage,
+    startCpu: NodeJS.CpuUsage,
+    errorMessage?: string,
+  ): PerformanceMetrics {
+    const endMemory = process.memoryUsage();
+    const endCpu = process.cpuUsage(startCpu);
+
+    return {
+      method,
+      path,
+      statusCode,
+      responseTime,
+      requestSize: JSON.stringify(requestData).length,
+      responseSize,
+      ipAddress: getClientIp(request),
+      userAgent: request.headers['user-agent'] || '',
+      userId: user?.userId,
+      username: user?.username,
+      cpuUsage: parseFloat(
+        ((endCpu.user + endCpu.system) / 1000).toFixed(2),
+      ),
+      memoryUsage: endMemory.heapUsed - startMemory.heapUsed,
+      errorMessage,
+    };
+  }
+
+  /**
+   * 异步保存性能指标
+   */
+  private saveMetrics(metrics: PerformanceMetrics): void {
+    this.performanceService.create(metrics).catch((error) => {
+      this.logger.error('保存性能数据失败:', error);
+    });
+  }
+
+  /**
+   * 检查慢请求并告警
+   */
+  private checkSlowRequest(metrics: PerformanceMetrics): void {
+    if (metrics.responseTime > SLOW_REQUEST_THRESHOLD) {
+      this.logger.warn(
+        `慢请求告警: ${metrics.method} ${metrics.path} - ${metrics.responseTime}ms`,
+      );
     }
-    const xRealIp = request.headers['x-real-ip'];
-    if (xRealIp) {
-      return xRealIp;
-    }
-    let ip = request.ip || request.connection?.remoteAddress || '';
-    if (ip === '::1' || ip === '::ffff:127.0.0.1') {
-      ip = '127.0.0.1';
-    }
-    if (ip.startsWith('::ffff:')) {
-      ip = ip.substring(7);
-    }
-    return ip;
   }
 }

@@ -29,7 +29,7 @@ export class MenuService {
   }
 
   // 根据ID获取菜单
-  async findOne(id: number): Promise<Menu> {
+  async findOne(id: number): Promise<Menu | null> {
     return this.menuRepository.findOne({ where: { id } });
   }
 

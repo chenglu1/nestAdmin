@@ -2,105 +2,38 @@
  * @Author: chenglu chenglud@digitalchina.com
  * @Description: Pro 风格的主布局组件 - 支持侧边栏展开收起、用户菜单在底部
  */
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Layout, Button, Space, message, Menu, Dropdown, Avatar, Divider, Spin } from 'antd';
 import type { MenuProps } from 'antd';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import {
   UserOutlined,
   LogoutOutlined,
-  TeamOutlined,
-  HomeOutlined,
-  MenuOutlined,
-  SafetyOutlined,
-  FileTextOutlined,
   SettingOutlined,
-  DashboardOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   DesktopOutlined,
   BugOutlined,
 } from '@ant-design/icons';
-import { getUserProfile, type UserProfile } from '@/api/auth';
-import { getUserMenus } from '@/api/menu';
+import { useLayoutData, useSiderCollapsed, useLogout } from '@/hooks/useLayout';
+import { IconMap } from './constants';
 import './Layout.less';
 
 const { Header, Content, Sider } = Layout;
 
-// 图标映射
-const IconMap: Record<string, React.ReactNode> = {
-  HomeOutlined: <HomeOutlined />,
-  UserOutlined: <UserOutlined />,
-  TeamOutlined: <TeamOutlined />,
-  MenuOutlined: <MenuOutlined />,
-  SafetyOutlined: <SafetyOutlined />,
-  FileTextOutlined: <FileTextOutlined />,
-  SettingOutlined: <SettingOutlined />,
-  DashboardOutlined: <DashboardOutlined />,
-};
-
-interface MenuItem {
-  id: number;
-  name: string;
-  path: string;
-  icon?: string;
-  children?: MenuItem[];
-}
-
 const ProLayout: React.FC = () => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [menus, setMenus] = useState<MenuItem[]>([]);
-  const [collapsed, setCollapsed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, menus, loading } = useLayoutData();
+  const { collapsed, toggleCollapsed } = useSiderCollapsed();
+  const logout = useLogout();
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await Promise.all([fetchUserProfile(), fetchMenus()]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const fetchUserProfile = async () => {
-    try {
-      const response = await getUserProfile();
-      setUser(response.data);
-    } catch (error) {
-      console.error('获取用户信息失败:', error);
-      message.error('获取用户信息失败');
-    }
-  };
-
-  const fetchMenus = async () => {
-    try {
-      const response = await getUserMenus();
-      setMenus(response.data);
-    } catch (error) {
-      console.error('获取菜单失败:', error);
-      message.error('获取菜单失败');
-    }
-  };
-
-  const currentPath = location.pathname;
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    message.success('退出登录成功!');
-    navigate('/login');
-  };
-
-  const handleMenuClick = (key: string) => {
+  const handleMenuClick = useCallback((key: string) => {
     navigate(key);
-  };
+  }, [navigate]);
 
-  // 用户菜单项
-  const userMenuItems: MenuProps['items'] = [
+  // 用户菜单项 - 使用 useMemo 优化
+  const userMenuItems: MenuProps['items'] = useMemo(() => [
     {
       key: 'profile',
       icon: <UserOutlined />,
@@ -125,9 +58,25 @@ const ProLayout: React.FC = () => {
       icon: <LogoutOutlined />,
       label: '退出登录',
       danger: true,
-      onClick: handleLogout,
+      onClick: logout,
     },
-  ];
+  ], [logout]);
+
+  // 菜单项 - 使用 useMemo 优化
+  const menuItems = useMemo(() => 
+    menus.map((menu) => ({
+      key: menu.path,
+      icon: IconMap[menu.icon || 'MenuOutlined'] || IconMap.MenuOutlined,
+      label: menu.name,
+      onClick: () => handleMenuClick(menu.path),
+      children: menu.children?.map((child) => ({
+        key: child.path,
+        label: child.name,
+        onClick: () => handleMenuClick(child.path),
+      })),
+    })),
+    [menus, handleMenuClick]
+  );
 
   if (loading) {
     return (
@@ -146,7 +95,7 @@ const ProLayout: React.FC = () => {
             type="text"
             size="large"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleCollapsed}
             className="layout-trigger"
           />
           <h1 className="logo-title">🎯 管理系统</h1>
@@ -184,19 +133,9 @@ const ProLayout: React.FC = () => {
             <div className="sider-menu-wrapper">
               <Menu
                 mode="inline"
-                selectedKeys={[currentPath]}
+                selectedKeys={[location.pathname]}
                 theme="dark"
-                items={menus.map((menu) => ({
-                  key: menu.path,
-                  icon: IconMap[menu.icon || 'MenuOutlined'] || <MenuOutlined />,
-                  label: menu.name,
-                  onClick: () => handleMenuClick(menu.path),
-                  children: menu.children?.map((child) => ({
-                    key: child.path,
-                    label: child.name,
-                    onClick: () => handleMenuClick(child.path),
-                  })),
-                }))}
+                items={menuItems}
               />
             </div>
 

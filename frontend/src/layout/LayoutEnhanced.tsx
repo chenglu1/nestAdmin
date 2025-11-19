@@ -1,7 +1,7 @@
 /*
  * @Description: Pro Layout 增强版 - 支持更多高级特性
  */
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import type { MenuProps } from 'antd';
 import {
   Layout,
@@ -23,13 +23,7 @@ import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import {
   UserOutlined,
   LogoutOutlined,
-  TeamOutlined,
-  HomeOutlined,
-  MenuOutlined,
-  SafetyOutlined,
-  FileTextOutlined,
   SettingOutlined,
-  DashboardOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BugOutlined,
@@ -37,31 +31,12 @@ import {
   SearchOutlined,
   CopyOutlined,
 } from '@ant-design/icons';
-import { getUserProfile, type UserProfile } from '@/api/auth';
-import { getUserMenus } from '@/api/menu';
+import { useLayoutData, useSiderCollapsed, useLogout } from '@/hooks/useLayout';
+import { IconMap } from './constants';
+import type { ChangePasswordFormData } from './types';
 import './LayoutEnhanced.less';
 
 const { Header, Content, Sider } = Layout;
-
-// 图标映射 - 扩展版
-const IconMap: Record<string, React.ReactNode> = {
-  HomeOutlined: <HomeOutlined />,
-  UserOutlined: <UserOutlined />,
-  TeamOutlined: <TeamOutlined />,
-  MenuOutlined: <MenuOutlined />,
-  SafetyOutlined: <SafetyOutlined />,
-  FileTextOutlined: <FileTextOutlined />,
-  SettingOutlined: <SettingOutlined />,
-  DashboardOutlined: <DashboardOutlined />,
-};
-
-interface MenuItem {
-  id: number;
-  name: string;
-  path: string;
-  icon?: string;
-  children?: MenuItem[];
-}
 
 interface LayoutEnhancedProps {
   enableBreadcrumb?: boolean;
@@ -78,100 +53,62 @@ const ProLayoutEnhanced: React.FC<LayoutEnhancedProps> = ({
   enableSearch = true,
   enableNotification = true,
 }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [menus, setMenus] = useState<MenuItem[]>([]);
-  const [collapsed, setCollapsed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, menus, loading } = useLayoutData();
+  const { collapsed, toggleCollapsed } = useSiderCollapsed();
+  const logout = useLogout();
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [notifications, setNotifications] = useState(3);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<ChangePasswordFormData>();
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await Promise.all([fetchUserProfile(), fetchMenus()]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const fetchUserProfile = async () => {
-    try {
-      const response = await getUserProfile();
-      setUser(response.data);
-    } catch (error) {
-      console.error('获取用户信息失败:', error);
-      message.error('获取用户信息失败');
-    }
-  };
-
-  const fetchMenus = async () => {
-    try {
-      const response = await getUserMenus();
-      setMenus(response.data);
-    } catch (error) {
-      console.error('获取菜单失败:', error);
-      message.error('获取菜单失败');
-    }
-  };
-
-  const currentPath = location.pathname;
-
-  // 面包屑导航构建
-  const buildBreadcrumbs = () => {
-    const paths = currentPath.split('/').filter(Boolean);
-    const breadcrumbs = [{ label: '首页', path: '/home' }];
+  // 面包屑导航构建 - 使用 useMemo 优化
+  const breadcrumbs = useMemo(() => {
+    const paths = location.pathname.split('/').filter(Boolean);
+    const items = [{ label: '首页', path: '/home' }];
 
     let currentMenus = menus;
     for (const path of paths) {
       if (path === 'home') continue;
       const menu = currentMenus.find((m) => m.path.includes(path));
       if (menu) {
-        breadcrumbs.push({ label: menu.name, path: menu.path });
+        items.push({ label: menu.name, path: menu.path });
         currentMenus = menu.children || [];
       }
     }
 
-    return breadcrumbs;
-  };
+    return items;
+  }, [location.pathname, menus]);
 
-  const handleLogout = () => {
+  const handleLogoutWithConfirm = useCallback(() => {
     Modal.confirm({
       title: '退出登录',
       content: '确定要退出登录吗？',
       okText: '确定',
       cancelText: '取消',
-      onOk() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        message.success('退出登录成功!');
-        navigate('/login');
-      },
+      onOk: logout,
     });
-  };
+  }, [logout]);
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = useCallback(async (values: ChangePasswordFormData) => {
     try {
-      // 调用修改密码API
+      // TODO: 调用修改密码API
+      console.log('修改密码:', values);
       message.success('密码修改成功！');
       setChangePasswordVisible(false);
       form.resetFields();
     } catch {
       message.error('密码修改失败');
     }
-  };
+  }, [form]);
 
-  const handleMenuClick = (key: string) => {
+  const handleMenuClick = useCallback((key: string) => {
     navigate(key);
-  };
+  }, [navigate]);
 
-  // 用户菜单项
-  const userMenuItems: MenuProps['items'] = [
+  // 用户菜单项 - 使用 useMemo 优化
+  const userMenuItems: MenuProps['items'] = useMemo(() => [
     {
       key: 'profile',
       icon: <UserOutlined />,
@@ -204,12 +141,12 @@ const ProLayoutEnhanced: React.FC<LayoutEnhancedProps> = ({
       icon: <LogoutOutlined />,
       label: '退出登录',
       danger: true,
-      onClick: handleLogout,
+      onClick: handleLogoutWithConfirm,
     },
-  ];
+  ], [handleLogoutWithConfirm]);
 
-  // 通知菜单
-  const notificationItems: MenuProps['items'] = [
+  // 通知菜单 - 使用 useMemo 优化
+  const notificationItems: MenuProps['items'] = useMemo(() => [
     {
       key: '1',
       label: '系统通知',
@@ -235,7 +172,23 @@ const ProLayoutEnhanced: React.FC<LayoutEnhancedProps> = ({
         setNotifications(0);
       },
     },
-  ];
+  ], [notifications]);
+
+  // 菜单项 - 使用 useMemo 优化
+  const menuItems = useMemo(() => 
+    menus.map((menu) => ({
+      key: menu.path,
+      icon: IconMap[menu.icon || 'MenuOutlined'] || IconMap.MenuOutlined,
+      label: menu.name,
+      onClick: () => handleMenuClick(menu.path),
+      children: menu.children?.map((child) => ({
+        key: child.path,
+        label: child.name,
+        onClick: () => handleMenuClick(child.path),
+      })),
+    })),
+    [menus, handleMenuClick]
+  );
 
   if (loading) {
     return (
@@ -254,7 +207,7 @@ const ProLayoutEnhanced: React.FC<LayoutEnhancedProps> = ({
             type="text"
             size="large"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleCollapsed}
             className="layout-trigger"
           />
           <h1 className="logo-title">🎯 管理系统</h1>
@@ -312,7 +265,7 @@ const ProLayoutEnhanced: React.FC<LayoutEnhancedProps> = ({
       {enableBreadcrumb && (
         <div className="breadcrumb-wrapper">
           <Breadcrumb
-            items={buildBreadcrumbs().map((item) => ({
+            items={breadcrumbs.map((item) => ({
               title: (
                 <span
                   onClick={() => navigate(item.path)}
@@ -341,19 +294,9 @@ const ProLayoutEnhanced: React.FC<LayoutEnhancedProps> = ({
             <div className="sider-menu-wrapper">
               <Menu
                 mode="inline"
-                selectedKeys={[currentPath]}
+                selectedKeys={[location.pathname]}
                 theme="dark"
-                items={menus.map((menu) => ({
-                  key: menu.path,
-                  icon: IconMap[menu.icon || 'MenuOutlined'] || <MenuOutlined />,
-                  label: menu.name,
-                  onClick: () => handleMenuClick(menu.path),
-                  children: menu.children?.map((child) => ({
-                    key: child.path,
-                    label: child.name,
-                    onClick: () => handleMenuClick(child.path),
-                  })),
-                }))}
+                items={menuItems}
               />
             </div>
 
@@ -432,6 +375,7 @@ const ProLayoutEnhanced: React.FC<LayoutEnhancedProps> = ({
           <Form.Item
             label="确认密码"
             name="confirmPassword"
+            dependencies={['newPassword']}
             rules={[
               { required: true, message: '请确认密码' },
               ({ getFieldValue }) => ({

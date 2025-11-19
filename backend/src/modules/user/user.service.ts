@@ -150,6 +150,6 @@ export class UserService {
       'SELECT role_id FROM user_roles WHERE user_id = ?',
       [userId]
     );
-    return result.map(item => item.role_id);
+    return result.map((item: any) => item.role_id);
   }
 }

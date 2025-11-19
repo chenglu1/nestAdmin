@@ -42,7 +42,7 @@ export class MenuController {
   @Get('user')
   @ApiOperation({ summary: '获取当前用户的菜单权限' })
   @ApiResponse({ status: 200, description: '获取成功' })
-  async getUserMenus(@Request() req) {
+  async getUserMenus(@Request() req: any) {
     const menus = await this.menuService.findByUserId(req.user.userId);
     return {
       code: 200,
@@ -92,7 +92,7 @@ export class MenuController {
         code: 200,
         message: '删除成功',
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
         code: 400,
         message: error.message,
