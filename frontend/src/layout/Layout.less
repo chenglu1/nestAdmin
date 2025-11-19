@@ -1,0 +1,404 @@
+@import '../styles/variables.less';
+
+// 主布局容器
+.pro-layout {
+  min-height: 100vh;
+  background: @body-background;
+  display: flex;
+  flex-direction: column;
+}
+
+// 加载状态
+.layout-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: @body-background;
+}
+
+// ==================== Header ====================
+.pro-header {
+  background: @layout-header-background;
+  padding: 0 24px;
+  height: 64px;
+  line-height: 64px;
+  box-shadow: @shadow-1-down;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .logo-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: @heading-color;
+      white-space: nowrap;
+    }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    :global .ant-btn {
+      color: @text-color-secondary;
+      border: none;
+
+      &:hover {
+        color: @primary-color;
+        background: transparent;
+      }
+    }
+  }
+
+  .layout-trigger {
+    cursor: pointer;
+    font-size: 16px !important;
+    transition: color 0.3s ease;
+
+    &:hover {
+      color: @primary-color !important;
+    }
+  }
+}
+
+// ==================== Main Layout ====================
+.pro-site-layout {
+  margin-top: 64px;
+  min-height: calc(100vh - 64px);
+  position: relative;
+}
+
+// ==================== Sider 侧边栏 ====================
+.pro-sider {
+  background: @layout-sider-background;
+  overflow: hidden;
+  position: fixed;
+  left: 0;
+  top: 64px;
+  bottom: 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  transition: all 0.2s ease;
+
+  .sider-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: @layout-sider-background;
+
+    // 菜单区域 - 可滚动
+    .sider-menu-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      }
+
+      :global {
+        .ant-menu {
+          background: transparent;
+          border-right: 0;
+
+          .ant-menu-item,
+          .ant-menu-submenu-title {
+            color: rgba(255, 255, 255, 0.65);
+            transition: all 0.3s ease;
+
+            &:hover {
+              color: #fff;
+              background-color: rgba(255, 255, 255, 0.1) !important;
+            }
+          }
+
+          .ant-menu-item-selected {
+            background-color: @primary-color !important;
+            color: #fff !important;
+
+            &::after {
+              border-right-color: @primary-color;
+            }
+          }
+
+          .ant-menu-submenu-selected > .ant-menu-submenu-title {
+            color: #fff !important;
+          }
+
+          .ant-menu-submenu-open > .ant-menu-submenu-title {
+            background-color: rgba(255, 255, 255, 0.08);
+          }
+
+          .ant-menu-inline {
+            background: rgba(0, 0, 0, 0.25);
+          }
+        }
+      }
+    }
+
+    // 用户信息区域 - 底部固定
+    .sider-user-footer {
+      padding: 12px 8px;
+      background: rgba(0, 0, 0, 0.25);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+
+      :global .ant-divider {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .user-info-card {
+        display: flex;
+        align-items: center;
+        padding: 8px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-avatar-wrapper {
+          flex-shrink: 0;
+
+          :global .ant-avatar {
+            border: 2px solid rgba(255, 255, 255, 0.2);
+          }
+        }
+
+        .user-info-text {
+          flex: 1;
+          margin: 0 12px;
+          min-width: 0;
+
+          .user-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .user-role {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.65);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        .user-menu-btn {
+          color: rgba(255, 255, 255, 0.65);
+          border: none;
+          flex-shrink: 0;
+
+          &:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+    }
+  }
+
+  // 折叠状态
+  &:global .ant-layout-sider-collapsed {
+    .sider-user-footer {
+      .user-info-card {
+        justify-content: center;
+      }
+    }
+  }
+}
+
+// ==================== Content 内容区域 ====================
+.pro-content-wrapper {
+  margin-left: 216px;
+  background: @body-background;
+  min-height: calc(100vh - 64px);
+  padding: 24px;
+  transition: margin-left 0.2s ease;
+
+  // 侧边栏折叠时的适应
+  :global(.ant-layout-sider-collapsed) ~ & {
+    margin-left: 80px;
+  }
+}
+
+// ==================== Pro-site-layout 响应式处理 ====================
+.pro-site-layout {
+  :global(.ant-layout-sider-collapsed) {
+    + .pro-content-wrapper {
+      margin-left: 80px;
+    }
+  }
+}
+
+// ==================== 响应式设计 ====================
+@media (max-width: 768px) {
+  .pro-header {
+    padding: 0 16px;
+    height: 56px;
+    line-height: 56px;
+
+    .header-left {
+      gap: 8px;
+
+      .logo-title {
+        font-size: 16px;
+      }
+    }
+
+    .header-right {
+      gap: 4px;
+    }
+  }
+
+  .pro-site-layout {
+    margin-top: 56px;
+    min-height: calc(100vh - 56px);
+  }
+
+  .pro-sider {
+    top: 56px;
+    width: 80px !important;
+
+    &:global .ant-layout-sider-collapsed {
+      width: 80px !important;
+    }
+
+    .sider-user-footer {
+      .user-info-card {
+        padding: 8px;
+
+        .user-avatar-wrapper {
+          margin: 0 auto;
+        }
+      }
+    }
+  }
+
+  .pro-content-wrapper {
+    margin-left: 80px;
+    padding: @content-padding-sm;
+    min-height: calc(100vh - 56px);
+
+    :global(.ant-layout-sider-collapsed) ~ & {
+      margin-left: 80px;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .pro-header {
+    padding: 0 12px;
+
+    .header-left {
+      gap: 4px;
+
+      .logo-title {
+        font-size: 14px;
+      }
+    }
+
+    .header-right {
+      gap: 0;
+
+      :global .ant-space {
+        gap: 0 !important;
+      }
+    }
+  }
+
+  .pro-sider {
+    width: 64px !important;
+
+    .sider-content {
+      .sider-menu-wrapper {
+        :global .ant-menu {
+          font-size: 12px;
+        }
+      }
+
+      .sider-user-footer {
+        padding: 8px 4px;
+
+        .user-info-card {
+          padding: 4px;
+        }
+      }
+    }
+  }
+
+  .pro-content-wrapper {
+    margin-left: 64px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pro-header {
+    .header-left {
+      .logo-title {
+        display: none;
+      }
+    }
+  }
+
+  .pro-sider {
+    width: 56px !important;
+  }
+
+  .pro-content-wrapper {
+    margin-left: 56px;
+    padding: 8px;
+  }
+}
+
+// ==================== 动画 ====================
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.pro-sider {
+  animation: slideInLeft 0.3s ease;
+}

@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 
 // 懒加载页面组件 - 代码分割,按需加载
 const Login = lazy(() => import('@/pages/Login/Login'));
-const Home = lazy(() => import('@/pages/Home/Home'));
+const ProLayout = lazy(() => import('@/layout/Layout'));
 const Dashboard = lazy(() => import('@/pages/Dashboard/Dashboard'));
 const UserManagement = lazy(() => import('@/pages/UserManagement/UserManagement'));
 const MenuManagement = lazy(() => import('@/pages/MenuManagement/MenuManagement'));
@@ -38,7 +38,7 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/home',
-    element: <Home />,
+    element: <ProLayout />,
     meta: {
       title: '首页',
       requiresAuth: true,
