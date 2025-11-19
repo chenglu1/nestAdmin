@@ -1,0 +1,81 @@
+name: Auto Deploy to Production
+
+# 触发条件：push 到 main 分支
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # 2. 设置 Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      # 3. 后端构建
+      - name: Build Backend
+        working-directory: ./backend
+        run: |
+          npm install --production
+          npm run build
+      
+      # 4. 前端构建
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm install --production
+          npm run build
+      
+      # 5. 复制到服务器
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /home/nestadmin
+            
+            # 拉取最新代码
+            git fetch origin
+            git checkout main
+            git pull origin main
+            
+            # 更新后端
+            cd /home/nestadmin/backend
+            npm install --production
+            npm run build
+            pm2 restart nestAdmin || pm2 start dist/main.js --name nestAdmin
+            
+            # 更新前端（如果使用 Nginx）
+            cd /home/nestadmin/frontend
+            npm install --production
+            npm run build
+            cp -r dist/* /var/www/nestadmin/
+            
+            # 检查健康状态
+            sleep 3
+            curl http://localhost:3001/api/health || exit 1
+            
+            echo "✅ 部署完成！"
+      
+      # 6. 部署失败通知
+      - name: Notify on Failure
+        if: failure()
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            echo "❌ 部署失败！" > /tmp/deploy-error.txt
+            pm2 logs nestAdmin --tail 50 >> /tmp/deploy-error.txt

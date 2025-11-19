@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Switch, Breadcrumb, Card, Select } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, UserOutlined, KeyOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Switch, Breadcrumb, Card, Select, Row, Col } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, UserOutlined, KeyOutlined, SearchOutlined, ClearOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import request from '@/utils/request';
+import { getUserList } from '@/api/user';
 import { getRoleList, assignRolesToUser, getUserRoles } from '@/api/role';
+import request from '@/utils/request';
 import './UserManagement.less';
 
 interface User {
@@ -22,12 +23,23 @@ interface Role {
   code: string;
 }
 
+interface QueryParams {
+  page: number;
+  limit: number;
+  username?: string;
+  email?: string;
+  nickname?: string;
+  status?: number;
+}
+
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const [queryParams, setQueryParams] = useState<QueryParams>({
+    page: 1,
+    limit: 10,
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -35,17 +47,16 @@ const UserManagement: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
   const [form] = Form.useForm();
+  const [queryForm] = Form.useForm();
 
   // 获取用户列表
-  const fetchUsers = async () => {
+  const fetchUsers = async (params: QueryParams) => {
     setLoading(true);
     try {
-      const response = await request.get('/user/list', {
-        params: { page, limit },
-      });
+      const response = await getUserList(params);
       setUsers(response.data.list);
       setTotal(response.data.total);
-    } catch (error) {
+    } catch {
       message.error('获取用户列表失败');
     } finally {
       setLoading(false);
@@ -53,18 +64,52 @@ const UserManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchRoles();
-  }, [page]);
+    fetchUsers(queryParams);
+  }, [queryParams.page, queryParams.limit]);
 
   // 获取角色列表
   const fetchRoles = async () => {
     try {
       const response = await getRoleList();
       setRoles(response.data || []);
-    } catch (error) {
+    } catch {
       console.error('获取角色列表失败');
     }
+  };
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
+
+  // 处理查询
+  const handleSearch = async (values: Record<string, string | number | undefined>) => {
+    const params: QueryParams = {
+      page: 1,
+      limit: 10,
+    };
+    
+    // 只添加非空的查询条件
+    if (values.username) params.username = String(values.username);
+    if (values.email) params.email = String(values.email);
+    if (values.nickname) params.nickname = String(values.nickname);
+    if (values.status !== undefined && values.status !== null) {
+      params.status = Number(values.status);
+    }
+    
+    setQueryParams(params);
+    // 立即调用查询
+    await fetchUsers(params);
+  };
+
+  // 重置查询
+  const handleReset = () => {
+    queryForm.resetFields();
+    const params: QueryParams = {
+      page: 1,
+      limit: 10,
+    };
+    setQueryParams(params);
+    fetchUsers(params);
   };
 
   // 添加用户
@@ -79,7 +124,7 @@ const UserManagement: React.FC = () => {
       const response = await getUserRoles(user.id);
       setSelectedRoles(response.data || []);
       setIsRoleModalOpen(true);
-    } catch (error: any) {
+    } catch {
       message.error('获取用户角色失败');
     }
   };
@@ -135,7 +180,7 @@ const UserManagement: React.FC = () => {
       }
       
       handleCloseModal();
-      fetchUsers();
+      fetchUsers(queryParams);
     } catch (error: any) {
       if (error.errorFields) {
         // 表单验证错误
@@ -150,7 +195,7 @@ const UserManagement: React.FC = () => {
     try {
       await request.delete(`/user/${id}`);
       message.success('删除成功');
-      fetchUsers();
+      fetchUsers(queryParams);
     } catch (error: any) {
       message.error(error.message || '删除失败');
     }
@@ -162,7 +207,7 @@ const UserManagement: React.FC = () => {
       const newStatus = user.status === 1 ? 0 : 1;
       await request.patch(`/user/${user.id}/status`, { status: newStatus });
       message.success(newStatus === 1 ? '已启用' : '已禁用');
-      fetchUsers();
+      fetchUsers(queryParams);
     } catch (error: any) {
       message.error(error.message || '操作失败');
     }
@@ -196,6 +241,7 @@ const UserManagement: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 120,
       render: (status: number, record: User) => (
         <Switch
           checked={status === 1}
@@ -282,103 +328,161 @@ const UserManagement: React.FC = () => {
           </Button>
         </div>
 
-      <Table
-        columns={columns}
-        dataSource={users}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          current: page,
-          pageSize: limit,
-          total: total,
-          showSizeChanger: false,
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (page) => setPage(page),
-        }}
-      />
-
-      <Modal
-        title={editingUser ? '编辑用户' : '添加用户'}
-        open={isModalOpen}
-        onOk={handleSubmit}
-        onCancel={handleCloseModal}
-        okText="确定"
-        cancelText="取消"
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          autoComplete="off"
-        >
-          <Form.Item
-            label="用户名"
-            name="username"
-            rules={[
-              { required: true, message: '请输入用户名' },
-              { min: 3, message: '用户名至少3个字符' },
-              { max: 50, message: '用户名最多50个字符' },
-            ]}
+        {/* 查询表单 */}
+        <Card style={{ marginBottom: 16, backgroundColor: '#fafafa' }} bordered={false}>
+          <Form
+            form={queryForm}
+            layout="vertical"
+            onFinish={handleSearch}
+            autoComplete="off"
           >
-            <Input placeholder="请输入用户名" disabled={!!editingUser} />
-          </Form.Item>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12} lg={6}>
+                <Form.Item name="username" label="用户名">
+                  <Input placeholder="请输入用户名" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Form.Item name="email" label="邮箱">
+                  <Input placeholder="请输入邮箱" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Form.Item name="nickname" label="昵称">
+                  <Input placeholder="请输入昵称" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} lg={6}>
+                <Form.Item name="status" label="状态">
+                  <Select 
+                    placeholder="请选择状态"
+                    options={[
+                      { label: '启用', value: 1 },
+                      { label: '禁用', value: 0 },
+                    ]}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={[16, 16]}>
+              <Col xs={24}>
+                <Space>
+                  <Button
+                    type="primary"
+                    icon={<SearchOutlined />}
+                    htmlType="submit"
+                  >
+                    查询
+                  </Button>
+                  <Button
+                    icon={<ClearOutlined />}
+                    onClick={handleReset}
+                  >
+                    重置
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
 
-          {!editingUser && (
+        <Table
+          columns={columns}
+          dataSource={users}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            current: queryParams.page,
+            pageSize: queryParams.limit,
+            total: total,
+            showSizeChanger: false,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (page) => setQueryParams({ ...queryParams, page }),
+          }}
+        />
+
+        <Modal
+          title={editingUser ? '编辑用户' : '添加用户'}
+          open={isModalOpen}
+          onOk={handleSubmit}
+          onCancel={handleCloseModal}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            autoComplete="off"
+          >
             <Form.Item
-              label="密码"
-              name="password"
+              label="用户名"
+              name="username"
               rules={[
-                { required: true, message: '请输入密码' },
-                { min: 6, message: '密码至少6个字符' },
+                { required: true, message: '请输入用户名' },
+                { min: 3, message: '用户名至少3个字符' },
+                { max: 50, message: '用户名最多50个字符' },
               ]}
             >
-              <Input.Password placeholder="请输入密码" />
+              <Input placeholder="请输入用户名" disabled={!!editingUser} />
             </Form.Item>
-          )}
 
-          <Form.Item
-            label="邮箱"
-            name="email"
-            rules={[
-              { type: 'email', message: '邮箱格式不正确' },
-            ]}
-          >
-            <Input placeholder="请输入邮箱" />
-          </Form.Item>
+            {!editingUser && (
+              <Form.Item
+                label="密码"
+                name="password"
+                rules={[
+                  { required: true, message: '请输入密码' },
+                  { min: 6, message: '密码至少6个字符' },
+                ]}
+              >
+                <Input.Password placeholder="请输入密码" />
+              </Form.Item>
+            )}
 
-          <Form.Item
-            label="昵称"
-            name="nickname"
-            rules={[
-              { max: 50, message: '昵称最多50个字符' },
-            ]}
-          >
-            <Input placeholder="请输入昵称" />
-          </Form.Item>
-        </Form>
-      </Modal>
+            <Form.Item
+              label="邮箱"
+              name="email"
+              rules={[
+                { type: 'email', message: '邮箱格式不正确' },
+              ]}
+            >
+              <Input placeholder="请输入邮箱" />
+            </Form.Item>
 
-      {/* 分配角色弹窗 */}
-      <Modal
-        title={`分配角色 - ${currentUser?.username}`}
-        open={isRoleModalOpen}
-        onOk={handleRoleSubmit}
-        onCancel={() => setIsRoleModalOpen(false)}
-        width={500}
-      >
-        <div style={{ marginTop: 20 }}>
-          <Select
-            mode="multiple"
-            placeholder="请选择角色"
-            style={{ width: '100%' }}
-            value={selectedRoles}
-            onChange={setSelectedRoles}
-            options={roles.map(role => ({
-              label: role.name,
-              value: role.id,
-            }))}
-          />
-        </div>
-      </Modal>
+            <Form.Item
+              label="昵称"
+              name="nickname"
+              rules={[
+                { max: 50, message: '昵称最多50个字符' },
+              ]}
+            >
+              <Input placeholder="请输入昵称" />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* 分配角色弹窗 */}
+        <Modal
+          title={`分配角色 - ${currentUser?.username}`}
+          open={isRoleModalOpen}
+          onOk={handleRoleSubmit}
+          onCancel={() => setIsRoleModalOpen(false)}
+          width={500}
+        >
+          <div style={{ marginTop: 20 }}>
+            <Select
+              mode="multiple"
+              placeholder="请选择角色"
+              style={{ width: '100%' }}
+              value={selectedRoles}
+              onChange={setSelectedRoles}
+              options={roles.map(role => ({
+                label: role.name,
+                value: role.id,
+              }))}
+            />
+          </div>
+        </Modal>
       </Card>
     </div>
   );

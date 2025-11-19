@@ -50,14 +50,34 @@ export class UserService {
     return await bcrypt.compare(plainPassword, hashedPassword);
   }
 
-  // 获取用户列表(支持分页)
-  async findAll(page: number = 1, limit: number = 10): Promise<{ users: User[]; total: number }> {
-    const [users, total] = await this.userRepository.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { createdAt: 'DESC' },
-      select: ['id', 'username', 'email', 'nickname', 'status', 'createdAt', 'updatedAt'],
-    });
+  // 获取用户列表(支持分页和查询)
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+    query?: { username?: string; email?: string; nickname?: string; status?: number }
+  ): Promise<{ users: User[]; total: number }> {
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
+
+    // 添加查询条件
+    if (query?.username) {
+      queryBuilder.andWhere('user.username LIKE :username', { username: `%${query.username}%` });
+    }
+    if (query?.email) {
+      queryBuilder.andWhere('user.email LIKE :email', { email: `%${query.email}%` });
+    }
+    if (query?.nickname) {
+      queryBuilder.andWhere('user.nickname LIKE :nickname', { nickname: `%${query.nickname}%` });
+    }
+    if (query?.status !== undefined) {
+      queryBuilder.andWhere('user.status = :status', { status: query.status });
+    }
+
+    const [users, total] = await queryBuilder
+      .select(['user.id', 'user.username', 'user.email', 'user.nickname', 'user.status', 'user.createdAt', 'user.updatedAt'])
+      .orderBy('user.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
     return { users, total };
   }
