@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: false,
       minify: 'esbuild',
+      target: 'es2015',
+      cssTarget: 'chrome80',
       rollupOptions: {
         output: {
           manualChunks: (id) => {
@@ -52,6 +54,12 @@ export default defineConfig(({ mode }) => {
         },
       },
       chunkSizeWarningLimit: 1000,
+      commonjsOptions: {
+        transformMixedEsModules: true,
+      },
+    },
+    define: {
+      'process.env': {},
     },
     optimizeDeps: {
       include: ['react', 'react-dom', 'react-router-dom', 'antd', 'axios'],
