@@ -26,9 +26,19 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: false,
-      minify: 'esbuild',
+      minify: 'terser',
       target: 'es2015',
       cssTarget: 'chrome80',
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+          pure_funcs: ['console.log'],
+        },
+        format: {
+          comments: false,
+        },
+      },
       rollupOptions: {
         output: {
           manualChunks: (id) => {
