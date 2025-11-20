@@ -9,20 +9,18 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      // 修复第三方库中的 version.split 问题
+      // 修复 zrender 浏览器版本检测问题
       {
-        name: 'fix-version-split',
-        enforce: 'post',
-        generateBundle(_, bundle) {
-          // 在生成 bundle 后处理所有 chunk
-          for (const [fileName, chunk] of Object.entries(bundle)) {
-            if (chunk.type === 'chunk' && fileName.includes('vendor')) {
-              // 只处理 vendor chunks
-              chunk.code = chunk.code.replace(
-                /(\b(?:version|Ver|ver|v)\b)\.split\s*\(\s*['"]\.['"](\s*\))/gi,
-                '(typeof $1 === "string" ? $1 : "0.0.0").split("."$2'
-              );
-            }
+        name: 'fix-zrender-browser-version',
+        enforce: 'pre',
+        transform(code, id) {
+          // 只处理 zrender 的 event.js 文件
+          if (id.includes('zrender') && id.includes('event.js') && code.includes('browser.firefox')) {
+            // 将 env.browser.version.split 替换为安全版本
+            return code.replace(
+              /env\.browser\.version\.split/g,
+              '(env.browser.version||"0").split'
+            );
           }
         }
       }
@@ -45,19 +43,9 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: false,
-      minify: 'terser',
+      minify: 'esbuild',
       target: 'es2015',
       cssTarget: 'chrome80',
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log'],
-        },
-        format: {
-          comments: false,
-        },
-      },
       rollupOptions: {
         output: {
           manualChunks: (id) => {
