@@ -7,7 +7,26 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      // 修复第三方库中的 version.split 问题
+      {
+        name: 'fix-version-split',
+        enforce: 'post',
+        generateBundle(_, bundle) {
+          // 在生成 bundle 后处理所有 chunk
+          for (const [fileName, chunk] of Object.entries(bundle)) {
+            if (chunk.type === 'chunk' && fileName.includes('vendor')) {
+              // 只处理 vendor chunks
+              chunk.code = chunk.code.replace(
+                /(\b(?:version|Ver|ver|v)\b)\.split\s*\(\s*['"]\.['"](\s*\))/gi,
+                '(typeof $1 === "string" ? $1 : "0.0.0").split("."$2'
+              );
+            }
+          }
+        }
+      }
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
