@@ -9,6 +9,14 @@ export interface QueryUserParams {
   status?: number;
 }
 
+export interface UserData {
+  username?: string;
+  password?: string;
+  email?: string;
+  nickname?: string;
+  status?: number;
+}
+
 // 获取用户列表
 export const getUserList = (params: QueryUserParams) => {
   return request.get('/user/list', { params });
@@ -25,11 +33,11 @@ export const updateUserStatus = (id: number, status: number) => {
 };
 
 // 更新用户信息
-export const updateUser = (id: number, data: any) => {
-  return request.patch(`/user/${id}`, data);
+export const updateUser = (id: number, data: UserData) => {
+  return request.patch<UserData, { code: number; message: string }>(`/user/${id}`, data);
 };
 
 // 注册用户
-export const registerUser = (data: any) => {
-  return request.post('/user/register', data);
+export const registerUser = (data: UserData & { password: string }) => {
+  return request.post<UserData & { password: string }, { code: number; message: string }>('/user/register', data);
 };

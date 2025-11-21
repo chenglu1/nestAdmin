@@ -2,7 +2,8 @@
  * @Author: chenglu chenglud@digitalchina.com
  * @Description: Pro 风格的主布局组件 - 支持侧边栏展开收起、用户菜单在底部、面包屑、搜索、通知等功能
  */
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import { AxiosError } from 'axios';
 import { Layout, Button, Space, message, Menu, Dropdown, Avatar, Divider, Spin, Breadcrumb, Badge, Modal, Form, Input } from 'antd';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import {
@@ -15,7 +16,10 @@ import {
   BellOutlined,
   CopyOutlined,
 } from '@ant-design/icons';
-import { useLayoutData, useSiderCollapsed, useLogout } from '@/hooks/useLayout';
+import { useAuthStore } from '@/stores/authStore';
+import { useLayoutStore } from '@/stores/layoutStore';
+
+// 确保正确导入并使用 layoutStore
 import { changePassword } from '@/api/auth';
 import { IconMap } from './constants';
 import type { ChangePasswordFormData } from './types';
@@ -24,14 +28,23 @@ import './Layout.less';
 const { Header, Content, Sider } = Layout;
 
 const ProLayout: React.FC = () => {
-  const { user, menus, loading } = useLayoutData();
-  const { collapsed, toggleCollapsed } = useSiderCollapsed();
-  const logout = useLogout();
+  const { user, menus, isAuthenticated, fetchMenus, logout, isLoading: loading } = useAuthStore();
+  // 正确访问 collapsed 状态和 toggleCollapsed 方法
+  const layoutStore = useLayoutStore();
+  const collapsed = layoutStore?.collapsed || false;
+  const toggleCollapsed = layoutStore?.toggleCollapsed || (() => {});
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [notifications, setNotifications] = useState(3);
   const [form] = Form.useForm<ChangePasswordFormData>();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // 组件加载时获取菜单
+  useEffect(() => {
+    if (isAuthenticated && menus.length === 0) {
+      fetchMenus();
+    }
+  }, [isAuthenticated, menus.length, fetchMenus]);
 
   // 面包屑导航构建 - 使用 useMemo 优化
   const breadcrumbs = useMemo(() => {
@@ -68,8 +81,9 @@ const ProLayout: React.FC = () => {
       message.success('密码修改成功！');
       setChangePasswordVisible(false);
       form.resetFields();
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || '密码修改失败';
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      const errorMessage = axiosError?.response?.data?.message || '密码修改失败';
       message.error(errorMessage);
     }
   }, [form]);

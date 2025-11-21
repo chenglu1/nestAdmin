@@ -1,22 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { login } from '@/api/auth';
+import { useAuthStore } from '@/stores/authStore';
 import './Login.less';
 
 const Login: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, isLoading, error } = useAuthStore();
 
   const onFinish = async (values: { username: string; password: string }) => {
-    setLoading(true);
     try {
-      const response = await login(values);
-      
-      // 保存 token 和用户信息
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      await login(values.username, values.password);
       
       message.success({
         content: '登录成功!',
@@ -27,11 +22,9 @@ const Login: React.FC = () => {
       setTimeout(() => {
         navigate('/home');
       }, 800);
-    } catch (error: any) {
-      // 错误已经在 request.ts 拦截器中统一处理并显示
-      // 不需要额外处理
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      message.error(error || '登录失败，请检查网络或账号密码');
+      console.error('Login error:', err);
     }
   };
 
@@ -68,7 +61,7 @@ const Login: React.FC = () => {
             <Button 
               type="primary" 
               htmlType="submit" 
-              loading={loading}
+              loading={isLoading}
               block
             >
               登录

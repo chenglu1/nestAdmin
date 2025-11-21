@@ -31,12 +31,12 @@ export interface UserProfile {
 
 // 登录接口
 export const login = (data: LoginParams) => {
-  return request.post<any, LoginResponse>('/auth/login', data);
+  return request.post<LoginParams, LoginResponse>('/auth/login', data);
 };
 
 // 获取用户信息
 export const getUserProfile = () => {
-  return request.get<any, { code: number; data: UserProfile }>('/user/profile');
+  return request.get<void, { code: number; data: UserProfile }>('/user/profile');
 };
 
 // 注册接口
@@ -56,5 +56,5 @@ export interface ChangePasswordParams {
 }
 
 export const changePassword = (data: ChangePasswordParams) => {
-  return request.post<any, { code: number; message: string }>('/user/change-password', data);
+  return request.post<ChangePasswordParams, { code: number; message: string }>('/user/change-password', data);
 };

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Switch, Breadcrumb, Card, Select, Row, Col } from 'antd';
+import { AxiosError } from 'axios';
 import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, UserOutlined, KeyOutlined, SearchOutlined, ClearOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getUserList } from '@/api/user';
@@ -50,7 +51,7 @@ const UserManagement: React.FC = () => {
   const [queryForm] = Form.useForm();
 
   // 获取用户列表
-  const fetchUsers = async (params: QueryParams) => {
+  const fetchUsers = useCallback(async (params: QueryParams) => {
     setLoading(true);
     try {
       const response = await getUserList(params);
@@ -61,11 +62,11 @@ const UserManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUsers(queryParams);
-  }, [queryParams.page, queryParams.limit]);
+  }, [fetchUsers, queryParams]);
 
   // 获取角色列表
   const fetchRoles = async () => {
@@ -137,8 +138,8 @@ const UserManagement: React.FC = () => {
       await assignRolesToUser(currentUser.id, selectedRoles);
       message.success('角色分配成功');
       setIsRoleModalOpen(false);
-    } catch (error: any) {
-      message.error(error.response?.data?.message || '角色分配失败');
+    } catch (error: unknown) {
+      message.error((error as AxiosError<{ message?: string }>)?.response?.data?.message || '角色分配失败');
     }
   };
 
@@ -181,12 +182,13 @@ const UserManagement: React.FC = () => {
       
       handleCloseModal();
       fetchUsers(queryParams);
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      // 检查是否是表单验证错误
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         // 表单验证错误
         return;
       }
-      message.error(error.message || '操作失败');
+      message.error((error as Error).message || '操作失败');
     }
   };
 
@@ -196,8 +198,8 @@ const UserManagement: React.FC = () => {
       await request.delete(`/user/${id}`);
       message.success('删除成功');
       fetchUsers(queryParams);
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '删除失败');
     }
   };
 
@@ -208,8 +210,8 @@ const UserManagement: React.FC = () => {
       await request.patch(`/user/${user.id}/status`, { status: newStatus });
       message.success(newStatus === 1 ? '已启用' : '已禁用');
       fetchUsers(queryParams);
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '操作失败');
     }
   };
 

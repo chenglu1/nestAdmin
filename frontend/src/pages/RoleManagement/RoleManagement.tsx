@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { AxiosError } from 'axios';
 import { Table, Button, Space, Modal, Form, Input, message, Popconfirm, Breadcrumb, Card, Tag, Tree } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, SafetyOutlined, KeyOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -32,40 +33,48 @@ const RoleManagement: React.FC = () => {
   const [checkedKeys, setCheckedKeys] = useState<number[]>([]);
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    fetchRoles();
-    fetchMenuTree();
+  interface MenuItem {
+    id: number;
+    name: string;
+    children?: MenuItem[];
+  }
+
+  const convertToTreeData = useCallback((menus: MenuItem[]): MenuTreeNode[] => {
+    return menus.map(menu => ({
+      key: menu.id,
+      title: menu.name,
+      children: menu.children && menu.children.length > 0 ? convertToTreeData(menu.children) : undefined,
+    }));
   }, []);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getRoleList();
       setRoles(response.data || []);
-    } catch (error: any) {
-      message.error(error.message || '获取角色列表失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '获取角色列表失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchMenuTree = async () => {
+  const fetchMenuTree = useCallback(async () => {
     try {
       const response = await getMenuTree();
       const treeData = convertToTreeData(response.data || []);
       setMenuTree(treeData);
-    } catch (error: any) {
+    } catch {
       message.error('获取菜单树失败');
     }
-  };
+  }, [convertToTreeData]);
 
-  const convertToTreeData = (menus: any[]): MenuTreeNode[] => {
-    return menus.map(menu => ({
-      key: menu.id,
-      title: menu.name,
-      children: menu.children ? convertToTreeData(menu.children) : undefined,
-    }));
-  };
+  useEffect(() => {
+    fetchRoles();
+    fetchMenuTree();
+  }, [fetchRoles, fetchMenuTree]);
+
+
 
   const handleAdd = () => {
     setEditingRole(null);
@@ -85,8 +94,8 @@ const RoleManagement: React.FC = () => {
       await deleteRole(id);
       message.success('删除成功');
       fetchRoles();
-    } catch (error: any) {
-      message.error(error.response?.data?.message || '删除失败');
+    } catch (error: unknown) {
+      message.error((error as AxiosError<{ message?: string }>)?.response?.data?.message || '删除失败');
     }
   };
 
@@ -104,11 +113,12 @@ const RoleManagement: React.FC = () => {
       
       setIsModalOpen(false);
       fetchRoles();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      // 检查是否是表单验证错误
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         return;
       }
-      message.error(error.response?.data?.message || '操作失败');
+      message.error((error as AxiosError<{ message?: string }>)?.response?.data?.message || '操作失败');
     }
   };
 
@@ -118,7 +128,7 @@ const RoleManagement: React.FC = () => {
       const response = await getRoleMenus(role.id);
       setCheckedKeys(response.data || []);
       setIsPermissionModalOpen(true);
-    } catch (error: any) {
+    } catch {
       message.error('获取角色权限失败');
     }
   };
@@ -130,8 +140,8 @@ const RoleManagement: React.FC = () => {
       await assignMenusToRole(currentRole.id, checkedKeys);
       message.success('权限分配成功');
       setIsPermissionModalOpen(false);
-    } catch (error: any) {
-      message.error(error.response?.data?.message || '权限分配失败');
+    } catch (error: unknown) {
+      message.error((error as AxiosError<{ message?: string }>)?.response?.data?.message || '权限分配失败');
     }
   };
 
@@ -321,7 +331,23 @@ const RoleManagement: React.FC = () => {
             checkable
             treeData={menuTree}
             checkedKeys={checkedKeys}
-            onCheck={(checked: any) => setCheckedKeys(checked)}
+            onCheck={(checkedKeysArg, info) => {
+              // 处理两种可能的参数形式
+              let checkedKeysArray: React.Key[] = [];
+              
+              // 如果是数组形式
+              if (Array.isArray(checkedKeysArg)) {
+                checkedKeysArray = checkedKeysArg;
+              }
+              // 如果是对象形式
+              else if (typeof checkedKeysArg === 'object' && checkedKeysArg !== null) {
+                checkedKeysArray = checkedKeysArg.checked || [];
+              }
+              
+              // 过滤并转换为number类型数组
+              const numberKeys = checkedKeysArray.filter(key => typeof key === 'number') as number[];
+              setCheckedKeys(numberKeys);
+            }}
             defaultExpandAll
           />
         </div>

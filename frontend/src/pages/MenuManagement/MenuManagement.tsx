@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AxiosError } from 'axios';
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Breadcrumb, Card, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, MenuOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -34,8 +35,8 @@ const MenuManagement: React.FC = () => {
     try {
       const response = await getMenuList();
       setMenus(response.data || []);
-    } catch (error: any) {
-      message.error(error.message || '获取菜单列表失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '获取菜单列表失败');
     } finally {
       setLoading(false);
     }
@@ -59,8 +60,8 @@ const MenuManagement: React.FC = () => {
       await deleteMenu(id);
       message.success('删除成功');
       fetchMenus();
-    } catch (error: any) {
-      message.error(error.response?.data?.message || '删除失败');
+    } catch (error: unknown) {
+      message.error((error as AxiosError<{ message?: string }>)?.response?.data?.message || '删除失败');
     }
   };
 
@@ -78,11 +79,12 @@ const MenuManagement: React.FC = () => {
       
       setIsModalOpen(false);
       fetchMenus();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      // 检查是否是表单验证错误
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         return;
       }
-      message.error(error.response?.data?.message || '操作失败');
+      message.error((error as AxiosError<{ message?: string }>)?.response?.data?.message || '操作失败');
     }
   };
 

@@ -1,18 +1,24 @@
 import request from '@/utils/request';
 
+export interface RoleData {
+  id?: number;
+  name: string;
+  description?: string;
+}
+
 // 获取角色列表
 export const getRoleList = () => {
   return request.get('/role/list');
 };
 
 // 创建角色
-export const createRole = (data: any) => {
-  return request.post('/role', data);
+export const createRole = (data: RoleData) => {
+  return request.post<RoleData, { code: number; message: string }>('/role', data);
 };
 
 // 更新角色
-export const updateRole = (id: number, data: any) => {
-  return request.put(`/role/${id}`, data);
+export const updateRole = (id: number, data: RoleData) => {
+  return request.put<RoleData, { code: number; message: string }>(`/role/${id}`, data);
 };
 
 // 删除角色

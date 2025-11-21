@@ -6,7 +6,7 @@
  * @FilePath: \nestAdmin\frontend\src\pages\OperationLog\OperationLog.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -47,7 +47,7 @@ const OperationLog: React.FC = () => {
   const [currentLog, setCurrentLog] = useState<OperationLog | null>(null);
 
   // 获取日志列表
-  const fetchLogList = async (page = currentPage, limit = pageSize) => {
+  const fetchLogList = useCallback(async (page = currentPage, limit = pageSize) => {
     setLoading(true);
     try {
       const values = form.getFieldsValue();
@@ -60,17 +60,17 @@ const OperationLog: React.FC = () => {
       setDataSource(res.data.list);
       setTotal(res.data.total);
       setCurrentPage(res.data.page);
-    } catch (error) {
+    } catch {
       message.error('获取日志列表失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, form]);
 
   // 初始加载
   useEffect(() => {
     fetchLogList();
-  }, []);
+  }, [fetchLogList]);
 
   // 搜索
   const handleSearch = () => {
@@ -104,7 +104,7 @@ const OperationLog: React.FC = () => {
           await deleteLog(id);
           message.success('删除成功');
           fetchLogList();
-        } catch (error) {
+        } catch {
           message.error('删除失败');
         }
       },
@@ -125,7 +125,7 @@ const OperationLog: React.FC = () => {
           await clearAllLogs();
           message.success('清空成功');
           fetchLogList(1, pageSize);
-        } catch (error) {
+        } catch {
           message.error('清空失败');
         }
       },

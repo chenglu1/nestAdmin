@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Table, Tag, DatePicker, Button, Space, message } from 'antd';
 import {
   ClockCircleOutlined,
@@ -18,6 +18,14 @@ import {
 } from '@/api/performance';
 import './PerformanceMonitor.less';
 
+// 慢接口数据结构接口
+interface SlowEndpoint {
+  method: string;
+  path: string;
+  avgResponseTime: string;
+  count: number;
+}
+
 const { RangePicker } = DatePicker;
 
 const PerformanceMonitor: React.FC = () => {
@@ -27,13 +35,7 @@ const PerformanceMonitor: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000); // 每30秒刷新
-    return () => clearInterval(interval);
-  }, [dateRange]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [statsRes, timeSeriesRes, metricsRes] = await Promise.all([
@@ -45,12 +47,18 @@ const PerformanceMonitor: React.FC = () => {
       setStats(statsRes.data);
       setTimeSeries(timeSeriesRes.data);
       setMetrics(metricsRes.data.data);
-    } catch (error) {
+    } catch {
       message.error('获取性能数据失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // 每30秒刷新
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   // 响应时间趋势图
   const responseTimeOption: EChartsOption = {
@@ -144,13 +152,13 @@ const PerformanceMonitor: React.FC = () => {
           {time}ms
         </span>
       ),
-      sorter: (a: any, b: any) => parseFloat(a.avgResponseTime) - parseFloat(b.avgResponseTime),
+      sorter: (a: SlowEndpoint, b: SlowEndpoint) => parseFloat(a.avgResponseTime) - parseFloat(b.avgResponseTime),
     },
     {
       title: '请求次数',
       dataIndex: 'count',
       key: 'count',
-      sorter: (a: any, b: any) => a.count - b.count,
+      sorter: (a: SlowEndpoint, b: SlowEndpoint) => a.count - b.count,
     },
   ];
 

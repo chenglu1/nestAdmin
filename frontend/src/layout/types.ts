@@ -17,6 +17,9 @@ export interface UserProfile {
   email?: string;
   avatar?: string;
   roles?: string[];
+  status?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ChangePasswordFormData {
