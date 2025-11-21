@@ -6,7 +6,6 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import RenderRouter from '@/router';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import './App.less';
 
 // 设置 dayjs 全局中文
 dayjs.locale('zh-cn');

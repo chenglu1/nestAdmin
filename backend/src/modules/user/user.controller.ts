@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam, 
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OperationLog } from '../log/decorators/operation-log.decorator';
 
@@ -171,6 +172,30 @@ export class UserController {
     return {
       code: 200,
       data: roleIds,
+    };
+  }
+
+  // 修改密码（当前登录用户）
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @OperationLog('用户管理', '修改密码')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: '修改当前用户密码' })
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiResponse({ status: 200, description: '密码修改成功' })
+  @ApiResponse({ status: 400, description: '当前密码错误或新密码与旧密码相同' })
+  async changePassword(
+    @Request() req: any,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    await this.userService.changePassword(
+      req.user.userId,
+      changePasswordDto.oldPassword,
+      changePasswordDto.newPassword,
+    );
+    return {
+      code: 200,
+      message: '密码修改成功',
     };
   }
 }

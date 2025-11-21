@@ -130,6 +130,34 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
+  // 修改密码（需要验证旧密码）
+  async changePassword(userId: number, oldPassword: string, newPassword: string): Promise<void> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    // 验证旧密码
+    const isOldPasswordValid = await this.validatePassword(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      throw new ConflictException('当前密码错误');
+    }
+
+    // 检查新密码是否与旧密码相同
+    const isSamePassword = await this.validatePassword(newPassword, user.password);
+    if (isSamePassword) {
+      throw new ConflictException('新密码不能与当前密码相同');
+    }
+
+    // 加密新密码
+    const salt = await bcrypt.genSalt(10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+    // 更新密码
+    user.password = hashedNewPassword;
+    await this.userRepository.save(user);
+  }
+
   // 给用户分配角色
   async assignRoles(userId: number, roleIds: number[]): Promise<void> {
     // 先删除旧的关联

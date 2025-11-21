@@ -48,3 +48,13 @@ export const register = (data: {
 }) => {
   return request.post('/user/register', data);
 };
+
+// 修改密码接口
+export interface ChangePasswordParams {
+  oldPassword: string;
+  newPassword: string;
+}
+
+export const changePassword = (data: ChangePasswordParams) => {
+  return request.post<any, { code: number; message: string }>('/user/change-password', data);
+};
