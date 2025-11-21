@@ -155,8 +155,9 @@ npm install @nestjs/cache-manager cache-manager
 # 如需 Redis: npm install cache-manager-redis-store
 
 # 6. 启动开发服务
-npm run dev:backend   # 后端 (http://localhost:3001)
-npm run dev:frontend  # 前端 (http://localhost:5174)
+npm run dev           # 同时启动前后端服务（推荐）
+npm run dev:backend   # 仅启动后端 (http://localhost:3001)
+npm run dev:frontend  # 仅启动前端 (http://localhost:5174)
 ```
 
 ### 方式 3: PM2 生产部署
@@ -231,6 +232,7 @@ npm run build
 ```bash
 # 根目录统一命令
 npm run install:all      # 安装所有依赖
+npm run dev              # 同时启动前后端服务（推荐）
 npm run dev:backend      # 启动后端
 npm run dev:frontend     # 启动前端
 npm run lint             # 检查所有代码

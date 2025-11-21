@@ -6,6 +6,7 @@
   "scripts": {
     "prepare": "husky install",
     "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run start:dev",
     "dev:frontend": "cd frontend && npm run dev",
     "build:backend": "cd backend && npm run build",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",
     "@commitlint/config-conventional": "^19.0.0",
+    "concurrently": "^8.2.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0"
   },
