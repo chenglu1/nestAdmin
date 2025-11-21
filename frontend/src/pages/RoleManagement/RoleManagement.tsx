@@ -331,7 +331,7 @@ const RoleManagement: React.FC = () => {
             checkable
             treeData={menuTree}
             checkedKeys={checkedKeys}
-            onCheck={(checkedKeysArg, info) => {
+            onCheck={(checkedKeysArg) => {
               // 处理两种可能的参数形式
               let checkedKeysArray: React.Key[] = [];
               
