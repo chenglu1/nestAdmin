@@ -25,4 +25,7 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  // 刷新令牌关联将通过RefreshToken实体的ManyToOne关系处理
+  // refreshTokens: any[];
 }

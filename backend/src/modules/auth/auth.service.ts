@@ -8,8 +8,13 @@
  */
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/login.dto';
+import { RefreshToken } from './entities/refresh-token.entity';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +23,9 @@ export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
+    private configService: ConfigService,
+    @InjectRepository(RefreshToken)
+    private refreshTokenRepository: Repository<RefreshToken>,
   ) {}
 
   async login(loginDto: LoginDto) {
@@ -49,12 +57,9 @@ export class AuthService {
       throw new UnauthorizedException('账号已被禁用');
     }
 
-    // 生成 JWT token
-    const payload = {
-      sub: user.id,
-      username: user.username,
-    };
-    const token = this.jwtService.sign(payload);
+    // 生成访问令牌和刷新令牌
+    const accessToken = this.generateAccessToken(user.id, user.username);
+    const refreshToken = await this.generateAndSaveRefreshToken(user.id);
     
     this.logger.log(`登录成功: username=${username}, userId=${user.id}`);
 
@@ -62,7 +67,8 @@ export class AuthService {
       code: 200,
       message: '登录成功',
       data: {
-        token,
+        accessToken,
+        refreshToken,
         user: {
           id: user.id,
           username: user.username,
@@ -71,6 +77,103 @@ export class AuthService {
         },
       },
     };
+  }
+
+  // 生成访问令牌
+  private generateAccessToken(userId: number, username: string): string {
+    const payload = {
+      sub: userId,
+      username: username,
+    };
+    
+    const expiresIn = this.configService.get('JWT_EXPIRES_IN') || '15m';
+    return this.jwtService.sign(payload, { expiresIn });
+  }
+
+  // 生成并保存刷新令牌
+  private async generateAndSaveRefreshToken(userId: number): Promise<string> {
+    // 生成随机的刷新令牌
+    const token = crypto.randomBytes(40).toString('hex');
+    
+    // 设置过期时间（默认30天）
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + (this.configService.get('REFRESH_TOKEN_EXPIRES_IN_DAYS') || 30));
+    
+    // 创建刷新令牌记录
+    const refreshToken = this.refreshTokenRepository.create({
+      token,
+      userId,
+      expiresAt,
+      isRevoked: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    
+    await this.refreshTokenRepository.save(refreshToken);
+    return token;
+  }
+
+  // 刷新令牌
+  async refreshToken(oldRefreshToken: string) {
+    const refreshToken = await this.validateRefreshToken(oldRefreshToken);
+    
+    // 查找用户
+    const user = await this.validateUser(refreshToken.userId);
+    
+    // 吊销旧的刷新令牌
+    await this.revokeRefreshToken(oldRefreshToken);
+    
+    // 生成新的访问令牌和刷新令牌
+    const newAccessToken = this.generateAccessToken(user.id, user.username);
+    const newRefreshToken = await this.generateAndSaveRefreshToken(user.id);
+    
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  // 验证刷新令牌
+  private async validateRefreshToken(token: string): Promise<RefreshToken> {
+    const refreshToken = await this.refreshTokenRepository.findOne({
+      where: { token },
+    });
+    
+    if (!refreshToken) {
+      throw new UnauthorizedException('无效的刷新令牌');
+    }
+    
+    if (refreshToken.isExpired()) {
+      await this.refreshTokenRepository.remove(refreshToken);
+      throw new UnauthorizedException('刷新令牌已过期');
+    }
+    
+    if (refreshToken.isRevoked) {
+      throw new UnauthorizedException('刷新令牌已被吊销');
+    }
+    
+    return refreshToken;
+  }
+
+  // 吊销刷新令牌
+  async revokeRefreshToken(token: string): Promise<void> {
+    const refreshToken = await this.refreshTokenRepository.findOne({
+      where: { token },
+    });
+    
+    if (refreshToken) {
+      refreshToken.isRevoked = true;
+      refreshToken.updatedAt = new Date();
+      await this.refreshTokenRepository.save(refreshToken);
+    }
+  }
+
+  // 吊销用户的所有刷新令牌
+  async revokeAllUserRefreshTokens(userId: number): Promise<void> {
+    await this.refreshTokenRepository.update(
+      { userId, isRevoked: false },
+      { isRevoked: true, updatedAt: new Date() }
+    );
   }
 
   async validateUser(userId: number) {
