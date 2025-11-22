@@ -243,6 +243,56 @@ npm run build
 
 ## 📝 开发指南
 
+### 数据库迁移
+
+TypeORM迁移是管理数据库结构变更的推荐方式，特别是在生产环境中。
+
+```bash
+# 开发环境迁移命令
+cd backend
+
+# 检查迁移状态
+./node_modules/.bin/typeorm-ts-node-commonjs migration:show -d ./typeorm.config.ts
+
+# 运行迁移
+./node_modules/.bin/typeorm-ts-node-commonjs migration:run -d ./typeorm.config.ts
+
+# 回滚迁移
+./node_modules/.bin/typeorm-ts-node-commonjs migration:revert -d ./typeorm.config.ts
+
+# 生成新的迁移（基于实体变更）
+./node_modules/.bin/typeorm-ts-node-commonjs migration:generate -d ./typeorm.config.ts src/migrations/NewMigrationName
+
+# 创建空的迁移文件
+./node_modules/.bin/typeorm-ts-node-commonjs migration:create src/migrations/NewMigrationName
+```
+
+### 生产环境迁移执行步骤
+
+**1. 准备阶段**
+- 在执行迁移前，务必备份当前数据库
+- 确保应用服务已停止或处于维护模式
+
+**2. 执行迁移**
+```bash
+# 生产环境Docker部署方式
+# 1. 进入backend容器
+cd backend
+
+# 2. 检查迁移状态
+./node_modules/.bin/typeorm-ts-node-commonjs migration:show -d ./typeorm.config.ts
+
+# 3. 执行迁移
+NODE_ENV=production ./node_modules/.bin/typeorm-ts-node-commonjs migration:run -d ./typeorm.config.ts
+
+# 4. 验证迁移结果（可选）
+./node_modules/.bin/typeorm-ts-node-commonjs migration:show -d ./typeorm.config.ts
+```
+
+**3. 部署集成**
+- 在CI/CD流程中，建议在应用启动前执行迁移脚本
+- 确保迁移脚本具有幂等性，避免重复执行导致问题
+
 ### 开发命令
 
 ```bash
