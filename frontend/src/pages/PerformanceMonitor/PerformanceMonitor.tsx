@@ -18,20 +18,12 @@ import {
 } from '@/api/performance';
 import './PerformanceMonitor.less';
 
-// 慢接口数据结构接口
-interface SlowEndpoint {
-  method: string;
-  path: string;
-  avgResponseTime: string;
-  count: number;
-}
-
 const { RangePicker } = DatePicker;
 
 const PerformanceMonitor: React.FC = () => {
   const [stats, setStats] = useState<PerformanceStats | null>(null);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesData[]>([]);
-  const [, setMetrics] = useState<PerformanceMetric[]>([]);
+  const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
 
@@ -46,7 +38,7 @@ const PerformanceMonitor: React.FC = () => {
 
       setStats(statsRes.data);
       setTimeSeries(timeSeriesRes.data);
-      setMetrics(metricsRes.data.data);
+      setMetrics(Array.isArray(metricsRes.data) ? metricsRes.data : (metricsRes.data?.data || []));
     } catch {
       message.error('获取性能数据失败');
     } finally {
@@ -135,7 +127,7 @@ const PerformanceMonitor: React.FC = () => {
       title: '方法',
       dataIndex: 'method',
       key: 'method',
-      width: 100,
+      width: 80,
       render: (method: string) => <Tag color="blue">{method}</Tag>,
       align: 'center' as const,
     },
@@ -144,29 +136,34 @@ const PerformanceMonitor: React.FC = () => {
       dataIndex: 'path',
       key: 'path',
       ellipsis: true,
-      width: '40%',
+      width: 400,
       align: 'left' as const,
     },
     {
-      title: '平均响应时间',
-      dataIndex: 'avgResponseTime',
-      key: 'avgResponseTime',
-      width: 150,
-      align: 'center' as const,
-      render: (time: string) => (
-        <span style={{ color: parseFloat(time) > 1000 ? '#ff4d4f' : '#faad14' }}>
-          {time}ms
-        </span>
-      ),
-      sorter: (a: SlowEndpoint, b: SlowEndpoint) => parseFloat(a.avgResponseTime) - parseFloat(b.avgResponseTime),
-    },
-    {
-      title: '请求次数',
-      dataIndex: 'count',
-      key: 'count',
+      title: '响应时间',
+      dataIndex: 'responseTime',
+      key: 'responseTime',
       width: 120,
       align: 'center' as const,
-      sorter: (a: SlowEndpoint, b: SlowEndpoint) => a.count - b.count,
+      render: (time: number) => (
+        <span style={{ color: time > 1000 ? '#ff4d4f' : '#faad14' }}>
+          {time.toFixed(2)}ms
+        </span>
+      ),
+      sorter: (a: { responseTime: number }, b: { responseTime: number }) => a.responseTime - b.responseTime,
+    },
+    {
+      title: '状态码',
+      dataIndex: 'statusCode',
+      key: 'statusCode',
+      width: 100,
+      align: 'center' as const,
+      render: (code: number) => (
+        <Tag color={code >= 500 ? 'red' : code >= 400 ? 'orange' : 'green'}>
+          {code}
+        </Tag>
+      ),
+      sorter: (a: { statusCode: number }, b: { statusCode: number }) => a.statusCode - b.statusCode,
     },
   ];
 
@@ -257,21 +254,23 @@ const PerformanceMonitor: React.FC = () => {
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
-            <Card className="chart-card">
-              <ReactECharts option={statusCodeOption} style={{ height: 300 }} />
+          <Col span={24}>
+            <Card title="状态码分布" className="chart-card">
+              <ReactECharts option={statusCodeOption} style={{ flex: 1 }} />
             </Card>
           </Col>
-          <Col span={12}>
-            <Card title="Top 10 慢接口" bordered={false} className="table-card">
+          <Col span={24}>
+            <Card title="Top 10 慢接口" bordered className="table-card">
               <Table
+                dataSource={metrics || []}
                 columns={slowEndpointsColumns}
-                dataSource={stats?.slowEndpoints || []}
                 pagination={false}
                 size="middle"
-                scroll={{ y: 240 }}
-                rowKey={(record) => `${record.method}-${record.path}`}
-                style={{ border: '1px solid #f0f0f0', borderRadius: '8px' }}
+                rowKey={(record) => `${record.method}-${record.path}-${record.createdAt}`}
+                bordered
+                scroll={{ x: 800, y: 400 }}
+                style={{ minWidth: '100%' }}
+                sticky={false}
               />
             </Card>
           </Col>

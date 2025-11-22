@@ -61,7 +61,7 @@ const Login: React.FC = () => {
             <Button 
               type="primary" 
               htmlType="submit" 
-              loading={isLoading}
+              loading={Boolean(isLoading.login)}
               block
             >
               登录

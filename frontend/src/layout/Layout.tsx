@@ -28,7 +28,7 @@ import './Layout.less';
 const { Header, Content, Sider } = Layout;
 
 const ProLayout: React.FC = () => {
-  const { user, menus, isAuthenticated, fetchMenus, logout, isLoading: loading } = useAuthStore();
+  const { user, menus, isAuthenticated, fetchMenus, logout, isLoading } = useAuthStore();
   // 正确访问 collapsed 状态和 toggleCollapsed 方法
   const layoutStore = useLayoutStore();
   const collapsed = layoutStore?.collapsed || false;
@@ -175,10 +175,13 @@ const ProLayout: React.FC = () => {
     [menus, handleMenuClick]
   );
 
-  if (loading) {
+  // 检查是否有任何加载操作正在进行
+  const isAnyLoading = Object.values(isLoading).some(loading => loading);
+  
+  if (isAnyLoading) {
     return (
       <div className="layout-loading">
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" tip="加载中..." spinning={isAnyLoading} />
       </div>
     );
   }

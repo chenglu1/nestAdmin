@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import compression from 'compression';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -26,6 +27,9 @@ async function bootstrap() {
 
   // 注册全局异常过滤器
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // 配置Cookie解析器，用于读取refresh token
+  app.use(cookieParser());
 
   // 启用 CORS,允许前端访问
   app.enableCors({

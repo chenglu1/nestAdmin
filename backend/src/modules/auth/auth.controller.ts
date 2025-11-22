@@ -61,8 +61,11 @@ export class AuthController {
   @OperationLog('auth', '刷新令牌')
   async refresh(@Request() req: ExpressRequest, @Res() res: ExpressResponse) {
     try {
-      // 从请求头或请求体中获取刷新令牌
-      const refreshToken = req.body.refreshToken || req.headers['x-refresh-token'];
+      // 从Cookie中获取刷新令牌，这是优先方式
+      const cookieRefreshToken = req.cookies?.refreshToken;
+      
+      // 如果Cookie中没有，则尝试从请求头或请求体中获取作为备选
+      const refreshToken = cookieRefreshToken || req.body.refreshToken || req.headers['x-refresh-token'];
       
       if (!refreshToken) {
         return res.status(HttpStatus.UNAUTHORIZED).json({
