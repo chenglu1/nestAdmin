@@ -135,18 +135,24 @@ const PerformanceMonitor: React.FC = () => {
       title: '方法',
       dataIndex: 'method',
       key: 'method',
+      width: 100,
       render: (method: string) => <Tag color="blue">{method}</Tag>,
+      align: 'center' as const,
     },
     {
       title: '路径',
       dataIndex: 'path',
       key: 'path',
       ellipsis: true,
+      width: '40%',
+      align: 'left' as const,
     },
     {
       title: '平均响应时间',
       dataIndex: 'avgResponseTime',
       key: 'avgResponseTime',
+      width: 150,
+      align: 'center' as const,
       render: (time: string) => (
         <span style={{ color: parseFloat(time) > 1000 ? '#ff4d4f' : '#faad14' }}>
           {time}ms
@@ -158,6 +164,8 @@ const PerformanceMonitor: React.FC = () => {
       title: '请求次数',
       dataIndex: 'count',
       key: 'count',
+      width: 120,
+      align: 'center' as const,
       sorter: (a: SlowEndpoint, b: SlowEndpoint) => a.count - b.count,
     },
   ];
@@ -250,19 +258,20 @@ const PerformanceMonitor: React.FC = () => {
 
         <Row gutter={16}>
           <Col span={12}>
-            <Card>
+            <Card className="chart-card">
               <ReactECharts option={statusCodeOption} style={{ height: 300 }} />
             </Card>
           </Col>
           <Col span={12}>
-            <Card title="Top 10 慢接口" bordered={false}>
+            <Card title="Top 10 慢接口" bordered={false} className="table-card">
               <Table
                 columns={slowEndpointsColumns}
                 dataSource={stats?.slowEndpoints || []}
                 pagination={false}
-                size="small"
+                size="middle"
                 scroll={{ y: 240 }}
                 rowKey={(record) => `${record.method}-${record.path}`}
+                style={{ border: '1px solid #f0f0f0', borderRadius: '8px' }}
               />
             </Card>
           </Col>

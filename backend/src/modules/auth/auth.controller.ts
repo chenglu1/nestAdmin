@@ -94,8 +94,8 @@ export class AuthController {
   @OperationLog('auth', '用户登出')
   async logout(@Request() req: ExpressRequest, @Res() res: ExpressResponse) {
     try {
-      // 从请求头或请求体中获取刷新令牌
-      const refreshToken = req.body.refreshToken || req.headers['x-refresh-token'];
+      // 安全地获取刷新令牌，先检查req.body是否存在
+      const refreshToken = req.body?.refreshToken || req.headers['x-refresh-token'];
       
       if (refreshToken) {
         // 吊销刷新令牌
@@ -125,3 +125,4 @@ export class AuthController {
     }
   }
 }
+

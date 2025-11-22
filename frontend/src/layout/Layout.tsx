@@ -298,7 +298,7 @@ const ProLayout: React.FC = () => {
                   <>
                     <div className="user-info-text">
                       <div className="user-name">{user?.nickname || user?.username}</div>
-                      <div className="user-role">管理员</div>
+                      <div className="user-role">{user?.username === 'admin' ? '管理员' : '用户'}</div>
                     </div>
                     <Dropdown
                       menu={{ items: userMenuItems }}
