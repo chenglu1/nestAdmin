@@ -97,24 +97,48 @@ export class AuthController {
   @OperationLog('auth', '用户登出')
   async logout(@Request() req: ExpressRequest, @Res() res: ExpressResponse) {
     try {
-      // 安全地获取刷新令牌，先检查req.body是否存在
-      const refreshToken = req.body?.refreshToken || req.headers['x-refresh-token'];
+      // 安全地获取刷新令牌，先检查req.body和req.headers是否存在 (重新启动)
+      let refreshToken: string | undefined;
       
-      if (refreshToken) {
-        // 吊销刷新令牌
-        await this.authService.revokeRefreshToken(refreshToken);
+      // 从请求体获取
+      if (req.body && 'refreshToken' in req.body) {
+        refreshToken = req.body.refreshToken;
+      }
+      // 从请求头获取
+      else if (req.headers && 'x-refresh-token' in req.headers) {
+        refreshToken = req.headers['x-refresh-token'] as string;
+      }
+      // 从Cookie获取作为备选
+      else if (req.cookies && 'refreshToken' in req.cookies) {
+        refreshToken = req.cookies.refreshToken;
       }
       
-      // 如果用户已认证，吊销该用户的所有刷新令牌
-      if (req.user && 'sub' in req.user) {
-        const sub = req.user.sub;
-        const userId = typeof sub === 'number' ? sub : 
-                      typeof sub === 'string' ? parseInt(sub, 10) : 0;
-        if (userId > 0) {
-          await this.authService.revokeAllUserRefreshTokens(userId);
+      // 如果找到了刷新令牌，尝试吊销它
+      if (refreshToken) {
+        try {
+          await this.authService.revokeRefreshToken(refreshToken);
+        } catch (tokenError: any) {
+          // 如果吊销单个令牌失败，继续执行，不影响整体登出流程
+          this.logger.warn('吊销单个刷新令牌失败', (tokenError && tokenError.stack) || 'Unknown error');
         }
       }
       
+      // 如果用户已认证，尝试吊销该用户的所有刷新令牌
+      try {
+        if (req.user && typeof req.user === 'object' && 'sub' in req.user) {
+          const sub = req.user.sub;
+          const userId = typeof sub === 'number' ? sub : 
+                        typeof sub === 'string' ? parseInt(sub, 10) : 0;
+          if (userId > 0) {
+            await this.authService.revokeAllUserRefreshTokens(userId);
+          }
+        }
+      } catch (userError: any) {
+        // 如果吊销用户所有令牌失败，继续执行
+        this.logger.warn('吊销用户所有刷新令牌失败', (userError && userError.stack) || 'Unknown error');
+      }
+      
+      // 无论如何都返回成功，确保用户体验
       return res.json({
         code: 200,
         message: '注销成功',
