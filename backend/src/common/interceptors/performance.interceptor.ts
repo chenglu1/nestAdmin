@@ -34,6 +34,24 @@ export class PerformanceInterceptor implements NestInterceptor {
 
   constructor(private performanceService: PerformanceService) {}
 
+  // 安全的JSON序列化方法，避免循环引用
+  private safeStringify(obj: any): string {
+    try {
+      const seen = new WeakSet();
+      return JSON.stringify(obj, (_key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return '[Circular]';
+          }
+          seen.add(value);
+        }
+        return value;
+      });
+    } catch (e) {
+      return '';
+    }
+  }
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const { method, originalUrl, body, query, params } = request;
@@ -50,7 +68,7 @@ export class PerformanceInterceptor implements NestInterceptor {
           200,
           Date.now() - startTime,
           { body, query, params },
-          JSON.stringify(data).length,
+          this.safeStringify(data).length,
           request,
           user,
           startMemory,
@@ -103,11 +121,12 @@ export class PerformanceInterceptor implements NestInterceptor {
       path,
       statusCode,
       responseTime,
-      requestSize: JSON.stringify(requestData).length,
+      requestSize: this.safeStringify(requestData).length,
       responseSize,
       ipAddress: getClientIp(request),
-      userAgent: request.headers['user-agent'] || '',
-      userId: user?.userId,
+      userAgent: request.headers?.['user-agent'] || '',
+      // 修复用户属性访问，支持JWT默认的sub和username
+      userId: user?.userId || user?.id || (user?.sub && typeof user.sub === 'number' ? user.sub : (user?.sub && typeof user.sub === 'string' ? parseInt(user.sub, 10) : undefined)),
       username: user?.username,
       cpuUsage: parseFloat(
         ((endCpu.user + endCpu.system) / 1000).toFixed(2),

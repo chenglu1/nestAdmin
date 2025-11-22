@@ -97,45 +97,61 @@ export class AuthController {
   @OperationLog('auth', '用户登出')
   async logout(@Request() req: ExpressRequest, @Res() res: ExpressResponse) {
     try {
-      // 安全地获取刷新令牌，先检查req.body和req.headers是否存在 (重新启动)
+      // 安全地获取刷新令牌，增加更多安全检查 (端口已完全释放)
       let refreshToken: string | undefined;
       
       // 从请求体获取
-      if (req.body && 'refreshToken' in req.body) {
+      if (req.body && typeof req.body === 'object' && 'refreshToken' in req.body) {
         refreshToken = req.body.refreshToken;
       }
+      
       // 从请求头获取
-      else if (req.headers && 'x-refresh-token' in req.headers) {
-        refreshToken = req.headers['x-refresh-token'] as string;
+      if (!refreshToken && req.headers && typeof req.headers === 'object' && 'x-refresh-token' in req.headers) {
+        refreshToken = typeof req.headers['x-refresh-token'] === 'string' ? req.headers['x-refresh-token'] : undefined;
       }
+      
       // 从Cookie获取作为备选
-      else if (req.cookies && 'refreshToken' in req.cookies) {
+      if (!refreshToken && req.cookies && typeof req.cookies === 'object' && 'refreshToken' in req.cookies) {
         refreshToken = req.cookies.refreshToken;
       }
       
       // 如果找到了刷新令牌，尝试吊销它
-      if (refreshToken) {
+      if (refreshToken && typeof refreshToken === 'string') {
         try {
           await this.authService.revokeRefreshToken(refreshToken);
         } catch (tokenError: any) {
           // 如果吊销单个令牌失败，继续执行，不影响整体登出流程
-          this.logger.warn('吊销单个刷新令牌失败', (tokenError && tokenError.stack) || 'Unknown error');
+          this.logger.warn('吊销单个刷新令牌失败', tokenError?.stack || 'Unknown error');
         }
       }
       
       // 如果用户已认证，尝试吊销该用户的所有刷新令牌
       try {
-        if (req.user && typeof req.user === 'object' && 'sub' in req.user) {
-          const sub = req.user.sub;
-          const userId = typeof sub === 'number' ? sub : 
-                        typeof sub === 'string' ? parseInt(sub, 10) : 0;
-          if (userId > 0) {
+        if (req.user && typeof req.user === 'object') {
+          let userId: number | undefined;
+          
+          // 支持多种用户ID来源
+          if ('id' in req.user && typeof req.user.id === 'number') {
+            userId = req.user.id;
+          } else if ('userId' in req.user && typeof req.user.userId === 'number') {
+            userId = req.user.userId;
+          } else if ('sub' in req.user) {
+            const sub = req.user.sub;
+            if (typeof sub === 'number') {
+              userId = sub;
+            } else if (typeof sub === 'string') {
+              const parsedId = parseInt(sub, 10);
+              userId = !isNaN(parsedId) ? parsedId : undefined;
+            }
+          }
+          
+          if (userId && userId > 0) {
             await this.authService.revokeAllUserRefreshTokens(userId);
           }
         }
       } catch (userError: any) {
         // 如果吊销用户所有令牌失败，继续执行
-        this.logger.warn('吊销用户所有刷新令牌失败', (userError && userError.stack) || 'Unknown error');
+        this.logger.warn('吊销用户所有刷新令牌失败', userError?.stack || 'Unknown error');
       }
       
       // 无论如何都返回成功，确保用户体验
