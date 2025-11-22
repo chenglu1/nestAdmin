@@ -87,7 +87,12 @@ export class AuthController {
       const cookieRefreshToken = req.cookies?.refreshToken;
       
       // 如果Cookie中没有，则尝试从请求头或请求体中获取作为备选
-      const refreshToken = cookieRefreshToken || req.body.refreshToken || req.headers['x-refresh-token'];
+      // 安全地访问req.body
+      const bodyRefreshToken = req.body && typeof req.body === 'object' ? req.body.refreshToken : undefined;
+      // 安全地访问req.headers
+      const headerRefreshToken = req.headers && req.headers['x-refresh-token'] ? String(req.headers['x-refresh-token']) : undefined;
+      
+      const refreshToken = cookieRefreshToken || bodyRefreshToken || headerRefreshToken;
       
       if (!refreshToken) {
         return res.status(HttpStatus.UNAUTHORIZED).json({
