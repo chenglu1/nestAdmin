@@ -38,8 +38,7 @@ import { winstonConfig } from './config/winston.config';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      // 暂时禁用自动同步以避免数据库错误
-      synchronize: false,
+      synchronize: process.env.NODE_ENV !== 'production',
       // 优化日志输出
       logging: process.env.NODE_ENV === 'development' ? true : ['error', 'warn'],
       // 连接池配置
