@@ -70,12 +70,9 @@ export const useAuthStore = create<AuthState>()(
 
       // 退出登录
       logout: async () => {
-        const { refreshToken } = get();
         try {
-          // 如果有refreshToken，调用后端注销接口
-          if (refreshToken) {
-            await apiLogout(refreshToken);
-          }
+          // 调用后端注销接口，后端会处理Cookie清除
+          await apiLogout();
         } catch (error) {
           console.error('注销失败:', error);
           // 即使注销失败也清除本地状态
@@ -88,38 +85,26 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             menus: []
           });
-          // 清除localStorage中的数据
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
         }
       },
 
       // 更新访问令牌
       updateToken: (newToken: string) => {
         set({ token: newToken });
-        localStorage.setItem('token', newToken);
       },
 
-      // 更新刷新令牌
+      // 更新刷新令牌 - 现在主要由后端通过Cookie管理
       updateRefreshToken: (newRefreshToken: string) => {
         set({ refreshToken: newRefreshToken });
-        localStorage.setItem('refreshToken', newRefreshToken);
       },
 
-      // 刷新令牌
+      // 刷新令牌 - 现在通过Cookie自动传递refreshToken
       refreshTokens: async () => {
-        const { refreshToken } = get();
-        if (!refreshToken) {
-          throw new Error('没有可用的刷新令牌');
-        }
-
         try {
-          const response = await apiRefreshToken(refreshToken);
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          const response = await apiRefreshToken();
+          const { accessToken } = response.data;
           
           get().updateToken(accessToken);
-          get().updateRefreshToken(newRefreshToken);
           
           return accessToken;
         } catch (error) {
@@ -158,22 +143,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated
-      }),
-      // 持久化时设置tokens到localStorage，兼容现有的request.ts
-      onRehydrateStorage: () => (state) => {
-        if (state?.token) {
-          localStorage.setItem('token', state.token);
-        }
-        if (state?.refreshToken) {
-          localStorage.setItem('refreshToken', state.refreshToken);
-        }
-        if (state?.user) {
-          localStorage.setItem('user', JSON.stringify(state.user));
-        }
-      }
-    }
-  )
+      })
+    })
 );

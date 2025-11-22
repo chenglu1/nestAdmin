@@ -35,9 +35,9 @@ export const login = (data: LoginParams) => {
   return request.post<LoginParams, LoginResponse>('/auth/login', data);
 };
 
-// 刷新令牌接口
-export const refreshToken = (refreshToken: string) => {
-  return request.post<void, { code: number; message: string; data: { accessToken: string; refreshToken: string } }>('/auth/refresh', { refreshToken });
+// 刷新令牌接口 - 不再需要传递refreshToken，通过Cookie自动传递
+export const refreshToken = () => {
+  return request.post<void, { code: number; message: string; data: { accessToken: string } }>('/auth/refresh');
 };
 
 // 获取用户信息
@@ -45,9 +45,9 @@ export const getUserProfile = () => {
   return request.get<void, { code: number; data: UserProfile }>('/user/profile');
 };
 
-// 登出接口
-export const logout = (refreshToken?: string) => {
-  return request.post('/auth/logout', refreshToken ? { refreshToken } : undefined);
+// 登出接口 - 不再需要传递refreshToken，通过Cookie自动传递
+export const logout = () => {
+  return request.post('/auth/logout');
 };
 
 // 注册接口

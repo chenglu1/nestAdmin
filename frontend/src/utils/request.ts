@@ -39,22 +39,14 @@ let refreshTokenPromise: Promise<string> | null = null;
 // 请求拦截器 - 添加 token
 request.interceptors.request.use(
   (config) => {
-    // 先尝试从store获取token
     try {
-    const { token } = useAuthStore.getState();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      return config;
-    }
-  } catch {
-    // 如果store还未初始化，从localStorage获取
-    console.log('Store not initialized yet, using localStorage');
-  }
-    
-    // fallback到localStorage
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // 从store获取token
+      const { token } = useAuthStore.getState();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Failed to get token from auth store:', error);
     }
     return config;
   },
@@ -62,73 +54,33 @@ request.interceptors.request.use(
 );
 
 /**
- * 获取刷新令牌
- */
-function getRefreshToken(): string | null {
-  try {
-    const { refreshToken } = useAuthStore.getState();
-    return refreshToken || localStorage.getItem('refreshToken');
-  } catch {
-    return localStorage.getItem('refreshToken');
-  }
-}
-
-/**
- * 更新访问令牌
- */
-function updateAccessToken(newToken: string): void {
-  try {
-    const { updateToken } = useAuthStore.getState();
-    if (typeof updateToken === 'function') {
-      updateToken(newToken);
-    }
-  } catch {
-    localStorage.setItem('token', newToken);
-  }
-}
-
-/**
- * 更新刷新令牌
- */
-function updateRefreshToken(newToken: string): void {
-  try {
-    const { updateRefreshToken } = useAuthStore.getState();
-    if (typeof updateRefreshToken === 'function') {
-      updateRefreshToken(newToken);
-    }
-  } catch {
-    localStorage.setItem('refreshToken', newToken);
-  }
-}
-
-/**
- * 执行刷新令牌操作
+ * 执行刷新令牌操作 - 现在refreshToken通过Cookie自动传递
  */
 async function doRefreshToken(): Promise<string> {
-  const refreshToken = getRefreshToken();
-  
-  if (!refreshToken) {
-    throw new Error('No refresh token available');
-  }
-  
   try {
-    // 直接使用axios实例而不是request，避免触发拦截器
+    // 直接使用axios实例而不是request，避免触发拦截器循环调用
     const response = await axios.post(
       `${API_BASE_URL}/auth/refresh`,
-      { refreshToken },
+      {}, // 不再需要手动传递refreshToken
       {
         headers: {
           'Content-Type': 'application/json',
         },
-        withCredentials: true,
+        withCredentials: true, // 确保浏览器发送Cookie
       }
     );
     
-    const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+    const { accessToken } = response.data.data;
     
-    // 更新本地存储的token
-    updateAccessToken(accessToken);
-    updateRefreshToken(newRefreshToken);
+    // 更新auth store中的token
+    try {
+      const { updateToken } = useAuthStore.getState();
+      if (typeof updateToken === 'function') {
+        updateToken(accessToken);
+      }
+    } catch (error) {
+      console.error('Failed to update token in auth store:', error);
+    }
     
     return accessToken;
   } catch (error) {
@@ -138,10 +90,8 @@ async function doRefreshToken(): Promise<string> {
       if (typeof logout === 'function') {
         logout();
       }
-    } catch {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Failed to logout after token refresh failure:', error);
     }
     
     throw error;
@@ -166,10 +116,8 @@ async function handle401Error(error: AxiosError): Promise<string> {
       if (typeof logout === 'function') {
         logout();
       }
-    } catch {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Failed to logout after refresh token error:', error);
     }
     
     setTimeout(() => {
@@ -179,40 +127,19 @@ async function handle401Error(error: AxiosError): Promise<string> {
     return '登录已过期,请重新登录';
   }
   
-  // 如果不是刷新接口且刷新令牌存在，尝试刷新令牌
-  const refreshToken = getRefreshToken();
-  if (refreshToken) {
-    try {
-      // 使用Promise来确保只刷新一次
-      if (!refreshTokenPromise) {
-        refreshTokenPromise = doRefreshToken();
-      }
-      
-      await refreshTokenPromise;
-      return 'Token 已自动刷新，请重试';
-    } finally {
-      // 无论成功失败，都清除刷新Promise
-      refreshTokenPromise = null;
-    }
-  }
-  
-  // 没有刷新令牌，直接登出
+  // 尝试刷新令牌（refreshToken通过Cookie自动传递）
   try {
-    const { logout } = useAuthStore.getState();
-    if (typeof logout === 'function') {
-      logout();
+    // 使用Promise来确保只刷新一次
+    if (!refreshTokenPromise) {
+      refreshTokenPromise = doRefreshToken();
     }
-  } catch {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    
+    await refreshTokenPromise;
+    return 'Token 已自动刷新，请重试';
+  } finally {
+    // 无论成功失败，都清除刷新Promise
+    refreshTokenPromise = null;
   }
-  
-  setTimeout(() => {
-    window.location.href = '/login';
-  }, 1500);
-  
-  return '登录已过期,请重新登录';
 }
 
 /**
