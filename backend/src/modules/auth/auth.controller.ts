@@ -119,96 +119,77 @@ export class AuthController {
   @OperationLog('auth', '用户登出')
   async logout(@Request() req: ExpressRequest, @Res() res: ExpressResponse) {
     try {
-      // 安全地获取刷新令牌，增加更多安全检查
+      // 尝试获取刷新令牌
       let refreshToken: string | undefined;
-      
       try {
-        // 从请求体获取 - 添加更严格的类型检查
-        if (req.body && typeof req.body === 'object') {
-          const bodyRefreshToken = req.body.refreshToken;
-          if (bodyRefreshToken && typeof bodyRefreshToken === 'string') {
-            refreshToken = bodyRefreshToken;
-          }
+        if (req?.body?.refreshToken) {
+          refreshToken = String(req.body.refreshToken);
+        } else if (req?.headers?.['x-refresh-token']) {
+          refreshToken = String(req.headers['x-refresh-token']);
+        } else if (req?.cookies?.refreshToken) {
+          refreshToken = String(req.cookies.refreshToken);
         }
         
-        // 从请求头获取 - 更安全的方式
-        if (!refreshToken && req.headers && typeof req.headers === 'object') {
-          const headerToken = req.headers['x-refresh-token'];
-          if (headerToken && typeof headerToken === 'string') {
-            refreshToken = headerToken;
-          }
-        }
-        
-        // 从Cookie获取作为备选
-        if (!refreshToken && req.cookies && typeof req.cookies === 'object') {
-          const cookieToken = req.cookies.refreshToken;
-          if (cookieToken && typeof cookieToken === 'string') {
-            refreshToken = cookieToken;
-          }
-        }
-        
-        // 如果找到了刷新令牌，尝试吊销它
-        if (refreshToken && typeof refreshToken === 'string') {
+        // 尝试验证和吊销单个令牌
+        if (refreshToken) {
           try {
             await this.authService.revokeRefreshToken(refreshToken);
-          } catch (tokenError: any) {
-            // 如果吊销单个令牌失败，继续执行，不影响整体登出流程
-            this.logger.warn('吊销单个刷新令牌失败', tokenError?.message || 'Unknown error');
+          } catch (e) {
+            this.logger.warn('吊销单个令牌失败，但继续登出流程');
           }
         }
-      } catch (tokenProcessError: any) {
-        this.logger.warn('处理刷新令牌时出错', tokenProcessError?.message || 'Unknown error');
+      } catch (e) {
+        this.logger.error('处理令牌时出错', e);
       }
       
-      // 如果用户已认证，尝试吊销该用户的所有刷新令牌
+      // 尝试从用户信息中吊销所有令牌
       try {
-        if (req.user && typeof req.user === 'object') {
-          let userId: number | undefined;
+        if (req?.user) {
+          const user = req.user as any;
+          const possibleIds = [
+            user.id,
+            user.userId,
+            user.sub,
+            user?.user?.id,
+            user?.data?.id
+          ];
           
-          // 支持多种用户ID来源，添加更严格的类型检查
-          const user = req.user;
-          if ('id' in user && typeof user.id === 'number') {
-            userId = user.id;
-          } else if ('userId' in user && typeof user.userId === 'number') {
-            userId = user.userId;
-          } else if ('sub' in user) {
-            const sub = user.sub;
-            if (typeof sub === 'number') {
-              userId = sub;
-            } else if (typeof sub === 'string') {
-              try {
-                const parsedId = parseInt(sub, 10);
-                if (!isNaN(parsedId) && parsedId > 0) {
-                  userId = parsedId;
-                }
-              } catch (parseError) {
-                this.logger.warn('解析用户ID失败');
+          // 查找有效的用户ID
+          let userId: number | undefined;
+          for (const id of possibleIds) {
+            if (id !== undefined && id !== null) {
+              const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+              if (typeof numId === 'number' && !isNaN(numId) && numId > 0) {
+                userId = numId;
+                break;
               }
             }
           }
           
-          if (userId && userId > 0) {
+          // 吊销用户所有令牌
+          if (userId) {
             try {
               await this.authService.revokeAllUserRefreshTokens(userId);
-            } catch (revokeError: any) {
-              this.logger.warn('吊销用户所有刷新令牌失败', revokeError?.message || 'Unknown error');
+            } catch (e) {
+              this.logger.warn('吊销用户所有令牌失败，但继续登出流程');
             }
           }
         }
-      } catch (userProcessError: any) {
-        this.logger.warn('处理用户信息时出错', userProcessError?.message || 'Unknown error');
+      } catch (e) {
+        this.logger.error('处理用户信息时出错', e);
       }
       
-      // 无论如何都返回成功，确保用户体验
+      // 总是返回成功，无论内部操作是否成功
       return res.status(200).json({
         code: 200,
-        message: '注销成功',
+        message: '注销成功'
       });
     } catch (error: any) {
-      this.logger.error('登出失败', error?.message || 'Unknown error');
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        code: 500,
-        message: '登出失败',
+      // 捕获所有未预期的错误，但仍然返回成功
+      this.logger.error('登出过程中发生错误', error?.message || 'Unknown error');
+      return res.status(200).json({
+        code: 200,
+        message: '注销成功'
       });
     }
   }

@@ -35,168 +35,64 @@ export class PerformanceInterceptor implements NestInterceptor {
 
   constructor(private performanceService: PerformanceService) {}
 
-  // 安全的JSON序列化方法，避免循环引用
+  /**
+   * 安全的JSON序列化方法 - 简单粗暴的实现
+   */
   private safeStringify(obj: any): string {
+    // 简单粗暴的方法：直接尝试JSON序列化，如果失败则返回简化信息
     try {
-      // 简单类型直接返回
-      if (obj === null || typeof obj !== 'object') {
-        return JSON.stringify(obj);
-      }
-
-      // 使用Map而不是WeakSet，因为某些对象可能无法添加到WeakSet
-      const seen = new Map<object, string>();
-      let circularCount = 0;
-      
-      // 常见可能导致循环引用的构造函数名称列表
-      const problematicConstructors = [
-        'Socket', 'ServerResponse', 'IncomingMessage', 'HTTPParser', 
-        'Buffer', 'Stream', 'EventEmitter', 'TCP', 'TLSSocket',
-        'ReadableStream', 'WritableStream', 'TransformStream',
-        'http.ClientRequest', 'http.IncomingMessage', 'http.ServerResponse',
-        'SocketAddress', 'SecureContext', 'X509Certificate'
-      ];
-      
-      // 可疑属性列表，这些属性通常包含循环引用
-      const suspiciousProps = [
-        'socket', 'parser', 'req', 'res', 'connection', 
-        'parent', 'child', '_events', '_eventsCount', 
-        '_maxListeners', 'httpVersion', 'headers', 
-        'rawHeaders', 'trailers', 'rawTrailers',
-        'aborted', 'upgrade', 'url', 'method',
-        'statusCode', 'statusMessage', '_httpMessage',
-        'client', 'server', 'context', 'session',
-        '_body', 'request', 'response', 'handler',
-        '_parsedUrl', 'originalUrl', 'baseUrl', 'route',
-        'subdomains', 'params', 'query', 'cookies',
-        'signedCookies', 'headersSent', 'locals',
-        '_eventsLayer', 'next', 'prev', 'routes'
-      ];
-      
-      // 递归处理对象的辅助函数
-      const processObject = (value: any, path: string[] = []): any => {
-        // 基本类型处理
-        if (value === null || typeof value !== 'object') {
-          return value;
-        }
-        
-        // 检查是否已经处理过这个对象
-        if (seen.has(value)) {
-          circularCount++;
-          return `[Circular:${seen.get(value)}]`;
-        }
-        
-        // 获取构造函数名称
-        const constructorName = value.constructor?.name || 'Object';
-        const objectId = `${constructorName}@${seen.size}`;
-        seen.set(value, objectId);
-        
-        // 快速检查：跳过已知的问题构造函数类型
-        if (problematicConstructors.includes(constructorName)) {
-          return `[${constructorName}]`;
-        }
-        
-        // 特殊类型检查
-        if (value instanceof Buffer || 
-            value instanceof Date || 
-            value instanceof Error ||
-            value instanceof Map ||
-            value instanceof Set ||
-            value instanceof RegExp ||
-            value instanceof Function) {
-          return `[${constructorName}]`;
-        }
-        
-        // 功能性检查：流、事件发射器等
-        if (typeof value.pipe === 'function' ||
-            (typeof value.on === 'function' && typeof value.emit === 'function') ||
-            typeof value.listen === 'function' ||
-            typeof value.connect === 'function' ||
-            typeof value.write === 'function' ||
-            typeof value.end === 'function') {
-          return `[${constructorName}]`;
-        }
-        
-        // 检查是否包含可疑属性
-        for (const prop of suspiciousProps) {
-          if (prop in value) {
-            // 对于可疑属性，直接替换为占位符而不是进一步检查
-            const newPath = [...path, prop];
-            // 防止路径过长导致栈溢出
-            if (newPath.length > 10) {
+      // 首先尝试直接序列化，如果成功最好
+      return JSON.stringify(obj);
+    } catch (error) {
+      // 序列化失败，可能是循环引用导致的
+      try {
+        // 方法1: 使用replacer函数处理常见的循环引用情况
+        return JSON.stringify(obj, (key, val) => {
+          // 跳过常见的问题属性
+          if (key && ['_events', '_eventsCount', '_maxListeners', 'socket', 'parser', 'res', 'req', 
+                     'buffer', 'stack', '__proto__', 'constructor'].includes(key)) {
+            return '[Skipped]';
+          }
+          // 处理常见的问题对象类型
+          if (val && typeof val === 'object') {
+            const constructorName = val.constructor?.name;
+            if (['Socket', 'HTTPParser', 'ServerResponse', 'IncomingMessage', 
+                 'Stream', 'Buffer', 'EventEmitter', 'Function'].includes(constructorName)) {
               return `[${constructorName}]`;
             }
-          }
-        }
-        
-        // 处理数组
-        if (Array.isArray(value)) {
-          const result: any[] = [];
-          for (let i = 0; i < Math.min(value.length, 100); i++) { // 限制数组长度，防止过大的数组
-            try {
-              // 确保索引转换为字符串并创建正确类型的path数组
-              const indexStr = i.toString();
-              const newPath: string[] = [...path, indexStr];
-              result.push(processObject(value[i], newPath));
-            } catch {
-              result.push('[Error]');
-            }
-          }
-          if (value.length > 100) {
-            result.push(`...(+${value.length - 100} more)`);
-          }
-          return result;
-        }
-        
-        // 处理普通对象 - 限制键数量以防止处理过大的对象
-        const result: any = {};
-        const keys = Object.keys(value);
-        for (let i = 0; i < Math.min(keys.length, 50); i++) { // 限制对象键数量
-          const key = keys[i];
-          try {
-            // 首先确保key不是undefined
-            if (key !== undefined) {
-              // 跳过可疑属性
-              if (suspiciousProps.includes(key)) {
-                result[key] = `[Skipped:${typeof value[key]}]`;
-              } else {
-                // 对嵌套对象进行递归处理
-                const newPath: string[] = [...path, key];
-                // 防止路径过长导致栈溢出
-                if (newPath.length > 10) {
-                  result[key] = '[DeepNested]';
-                } else {
-                  result[key] = processObject(value[key], newPath);
-                }
+            // 尝试限制对象深度，避免复杂嵌套
+            if (constructorName === 'Object' || constructorName === 'Array') {
+              // 对于普通对象和数组，尝试简化表示
+              if (key && key.length > 30) return '[LongKey]';
+              
+              // 对于数组，只保留前10个元素
+              if (Array.isArray(val) && val.length > 10) {
+                return `[Array(${val.length})]`;
+              }
+              
+              // 对于普通对象，只保留有限的键
+              if (!Array.isArray(val) && Object.keys(val).length > 10) {
+                return `[Object(${Object.keys(val).length} keys)]`;
               }
             }
-          } catch {
-            if (key !== undefined) {
-              result[key] = '[Error]';
-            }
           }
+          return val;
+        });
+      } catch (e) {
+        // 如果replacer方法也失败，返回最简化的信息
+        try {
+          // 最简化的处理：仅返回对象的基本类型信息
+          return JSON.stringify({
+            type: typeof obj,
+            constructor: obj?.constructor?.name || 'Unknown',
+            simplified: true,
+            message: 'Object contained circular references or unstringifiable values'
+          });
+        } catch (finalError) {
+          // 终极兜底：如果所有方法都失败，返回一个完全静态的字符串
+          return '{"error":"Serialization failed completely"}';
         }
-        if (keys.length > 50) {
-          result['...'] = `(+${keys.length - 50} more keys)`;
-        }
-        
-        return result;
-      };
-
-      // 开始处理对象
-      const processedObj = processObject(obj);
-      
-      // 如果发现了循环引用，记录日志但不影响程序运行
-      if (circularCount > 0) {
-        this.logger.debug(`检测到 ${circularCount} 个循环引用`);
       }
-      
-      // 对处理后的对象进行标准JSON序列化
-      return JSON.stringify(processedObj);
-    } catch (e) {
-      // 如果序列化失败，返回更详细的错误信息但避免暴露敏感数据
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`JSON序列化失败: ${errorMessage}`);
-      return `[无法序列化: ${typeof obj}]`;
     }
   }
 
