@@ -37,18 +37,46 @@ export class PerformanceInterceptor implements NestInterceptor {
   // 安全的JSON序列化方法，避免循环引用
   private safeStringify(obj: any): string {
     try {
+      // 简单类型直接返回
+      if (obj === null || typeof obj !== 'object') {
+        return JSON.stringify(obj);
+      }
+
       const seen = new WeakSet();
-      return JSON.stringify(obj, (_key, value) => {
+      
+      // 更安全的序列化函数，处理循环引用并跳过复杂对象
+      const replacer = (_key: string, value: any): any => {
+        // 处理循环引用
         if (typeof value === 'object' && value !== null) {
+          // 检查是否已经见过这个对象
           if (seen.has(value)) {
             return '[Circular]';
           }
+          
+          // 添加到已见集合
           seen.add(value);
+          
+          // 跳过可能包含循环引用的复杂对象类型
+          if (value instanceof Buffer || 
+              value instanceof Date || 
+              value instanceof Error ||
+              value.constructor?.name === 'Socket' ||
+              value.constructor?.name === 'ServerResponse' ||
+              value.constructor?.name === 'IncomingMessage' ||
+              value.constructor?.name === 'HTTPParser' ||
+              typeof value.pipe === 'function' ||
+              typeof value.on === 'function' && typeof value.emit === 'function') {
+            return `[${value.constructor?.name || 'Object'}]`;
+          }
         }
         return value;
-      });
+      };
+
+      const result = JSON.stringify(obj, replacer);
+      return result;
     } catch (e) {
-      return '';
+      // 如果序列化失败，返回空字符串或基本信息
+      return `[无法序列化: ${typeof obj}]`;
     }
   }
 

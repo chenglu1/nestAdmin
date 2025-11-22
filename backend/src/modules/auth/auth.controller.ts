@@ -37,8 +37,30 @@ export class AuthController {
     }
   })
   @ApiResponse({ status: 401, description: '用户名或密码错误' })
-  async login(@Body() loginDto: LoginDto) {
-    return await this.authService.login(loginDto);
+  async login(@Body() loginDto: LoginDto, @Res() res: ExpressResponse) {
+    try {
+      const result = await this.authService.login(loginDto);
+      
+      // 关键修复：显式设置refreshToken到Cookie中
+      // 这解决了生产环境中使用相对路径时Cookie无法正确传递的问题
+      if (result.data && result.data.refreshToken) {
+        res.cookie('refreshToken', result.data.refreshToken, {
+          httpOnly: true, // 防止XSS攻击
+          secure: process.env.NODE_ENV === 'production', // 生产环境使用HTTPS
+          sameSite: 'strict', // 防止CSRF攻击
+          path: '/api/auth/refresh', // 只在访问刷新令牌接口时发送
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30天过期，与刷新令牌一致
+        });
+      }
+      
+      return res.json(result);
+    } catch (error: any) {
+      this.logger.error('登录过程中发生错误', error?.stack || 'Unknown error');
+      return res.status(HttpStatus.UNAUTHORIZED).json({
+        code: 401,
+        message: error?.message || '登录失败',
+      });
+    }
   }
 
   @Post('refresh')
@@ -97,32 +119,45 @@ export class AuthController {
   @OperationLog('auth', '用户登出')
   async logout(@Request() req: ExpressRequest, @Res() res: ExpressResponse) {
     try {
-      // 安全地获取刷新令牌，增加更多安全检查 (端口已完全释放)
+      // 安全地获取刷新令牌，增加更多安全检查
       let refreshToken: string | undefined;
       
-      // 从请求体获取
-      if (req.body && typeof req.body === 'object' && 'refreshToken' in req.body) {
-        refreshToken = req.body.refreshToken;
-      }
-      
-      // 从请求头获取
-      if (!refreshToken && req.headers && typeof req.headers === 'object' && 'x-refresh-token' in req.headers) {
-        refreshToken = typeof req.headers['x-refresh-token'] === 'string' ? req.headers['x-refresh-token'] : undefined;
-      }
-      
-      // 从Cookie获取作为备选
-      if (!refreshToken && req.cookies && typeof req.cookies === 'object' && 'refreshToken' in req.cookies) {
-        refreshToken = req.cookies.refreshToken;
-      }
-      
-      // 如果找到了刷新令牌，尝试吊销它
-      if (refreshToken && typeof refreshToken === 'string') {
-        try {
-          await this.authService.revokeRefreshToken(refreshToken);
-        } catch (tokenError: any) {
-          // 如果吊销单个令牌失败，继续执行，不影响整体登出流程
-          this.logger.warn('吊销单个刷新令牌失败', tokenError?.stack || 'Unknown error');
+      try {
+        // 从请求体获取 - 添加更严格的类型检查
+        if (req.body && typeof req.body === 'object') {
+          const bodyRefreshToken = req.body.refreshToken;
+          if (bodyRefreshToken && typeof bodyRefreshToken === 'string') {
+            refreshToken = bodyRefreshToken;
+          }
         }
+        
+        // 从请求头获取 - 更安全的方式
+        if (!refreshToken && req.headers && typeof req.headers === 'object') {
+          const headerToken = req.headers['x-refresh-token'];
+          if (headerToken && typeof headerToken === 'string') {
+            refreshToken = headerToken;
+          }
+        }
+        
+        // 从Cookie获取作为备选
+        if (!refreshToken && req.cookies && typeof req.cookies === 'object') {
+          const cookieToken = req.cookies.refreshToken;
+          if (cookieToken && typeof cookieToken === 'string') {
+            refreshToken = cookieToken;
+          }
+        }
+        
+        // 如果找到了刷新令牌，尝试吊销它
+        if (refreshToken && typeof refreshToken === 'string') {
+          try {
+            await this.authService.revokeRefreshToken(refreshToken);
+          } catch (tokenError: any) {
+            // 如果吊销单个令牌失败，继续执行，不影响整体登出流程
+            this.logger.warn('吊销单个刷新令牌失败', tokenError?.message || 'Unknown error');
+          }
+        }
+      } catch (tokenProcessError: any) {
+        this.logger.warn('处理刷新令牌时出错', tokenProcessError?.message || 'Unknown error');
       }
       
       // 如果用户已认证，尝试吊销该用户的所有刷新令牌
@@ -130,37 +165,47 @@ export class AuthController {
         if (req.user && typeof req.user === 'object') {
           let userId: number | undefined;
           
-          // 支持多种用户ID来源
-          if ('id' in req.user && typeof req.user.id === 'number') {
-            userId = req.user.id;
-          } else if ('userId' in req.user && typeof req.user.userId === 'number') {
-            userId = req.user.userId;
-          } else if ('sub' in req.user) {
-            const sub = req.user.sub;
+          // 支持多种用户ID来源，添加更严格的类型检查
+          const user = req.user;
+          if ('id' in user && typeof user.id === 'number') {
+            userId = user.id;
+          } else if ('userId' in user && typeof user.userId === 'number') {
+            userId = user.userId;
+          } else if ('sub' in user) {
+            const sub = user.sub;
             if (typeof sub === 'number') {
               userId = sub;
             } else if (typeof sub === 'string') {
-              const parsedId = parseInt(sub, 10);
-              userId = !isNaN(parsedId) ? parsedId : undefined;
+              try {
+                const parsedId = parseInt(sub, 10);
+                if (!isNaN(parsedId) && parsedId > 0) {
+                  userId = parsedId;
+                }
+              } catch (parseError) {
+                this.logger.warn('解析用户ID失败');
+              }
             }
           }
           
           if (userId && userId > 0) {
-            await this.authService.revokeAllUserRefreshTokens(userId);
+            try {
+              await this.authService.revokeAllUserRefreshTokens(userId);
+            } catch (revokeError: any) {
+              this.logger.warn('吊销用户所有刷新令牌失败', revokeError?.message || 'Unknown error');
+            }
           }
         }
-      } catch (userError: any) {
-        // 如果吊销用户所有令牌失败，继续执行
-        this.logger.warn('吊销用户所有刷新令牌失败', userError?.stack || 'Unknown error');
+      } catch (userProcessError: any) {
+        this.logger.warn('处理用户信息时出错', userProcessError?.message || 'Unknown error');
       }
       
       // 无论如何都返回成功，确保用户体验
-      return res.json({
+      return res.status(200).json({
         code: 200,
         message: '注销成功',
       });
     } catch (error: any) {
-      this.logger.error('登出失败', error?.stack || 'Unknown error');
+      this.logger.error('登出失败', error?.message || 'Unknown error');
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         code: 500,
         message: '登出失败',
