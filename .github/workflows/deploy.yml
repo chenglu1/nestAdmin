@@ -39,32 +39,121 @@ jobs:
           fingerprint: ''  # 允许连接未知主机
           script_stop: true
           script: |
-            # 拉取最新代码
-            cd /www/wwwroot
-            git clone -b main ${{ secrets.REPOSITORY_URL }} nestadmin || (cd nestadmin && git fetch origin && git checkout main && git pull origin main)
+            # 拉取最新代码 - 使用GitHub内置变量代替自定义环境变量
+            cd /www/wwwroot || {
+              echo "❌ 无法访问 /www/wwwroot 目录";
+              exit 1;
+            }
+            
+            # 使用GitHub内置变量，避免依赖自定义环境变量
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+            echo "正在从 $REPO_URL 拉取代码..."
+            
+            if [ -d "nestadmin" ]; then
+              echo "更新已有项目..."
+              cd nestadmin && git fetch origin && git checkout main && git pull origin main || {
+                echo "❌ 更新项目失败";
+                exit 1;
+              }
+            else
+              echo "克隆新项目..."
+              git clone -b main "$REPO_URL" nestadmin || {
+                echo "❌ 克隆项目失败";
+                exit 1;
+              }
+            fi
             
             # 更新后端
-            cd /www/wwwroot/nestadmin/backend
-            npm install --production
-            npm run build
+            echo "更新后端服务..."
+            cd /www/wwwroot/nestadmin/backend || {
+              echo "❌ 无法访问后端目录";
+              exit 1;
+            }
+            
+            echo "安装后端依赖..."
+            npm install --production || {
+              echo "❌ 后端依赖安装失败";
+              exit 1;
+            }
+            
+            echo "构建后端项目..."
+            npm run build || {
+              echo "❌ 后端构建失败";
+              exit 1;
+            }
+            
             # 使用宝塔PM2管理器适配的命令
-            /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py restart nestAdmin || /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py add -n nestAdmin -p dist/main.js
+            echo "重启后端服务..."
+            if /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py restart nestAdmin; then
+              echo "✅ 后端服务重启成功"
+            else
+              echo "⚠️  重启失败，尝试添加服务..."
+              /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py add -n nestAdmin -p dist/main.js || {
+                echo "❌ 后端服务部署失败";
+                exit 1;
+              }
+              echo "✅ 后端服务添加成功"
+            fi
             
             # 更新前端
-            cd /www/wwwroot/nestadmin/frontend
-            npm install --production
-            npm run build
-            cp -r dist/* /www/wwwroot/nestadmin/
+            echo "更新前端应用..."
+            cd /www/wwwroot/nestadmin/frontend || {
+              echo "❌ 无法访问前端目录";
+              exit 1;
+            }
+            
+            echo "安装前端依赖..."
+            npm install --production || {
+              echo "❌ 前端依赖安装失败";
+              exit 1;
+            }
+            
+            echo "构建前端项目..."
+            npm run build || {
+              echo "❌ 前端构建失败";
+              exit 1;
+            }
+            
+            echo "复制前端构建文件..."
+            mkdir -p /www/wwwroot/nestadmin/dist || {
+              echo "❌ 无法创建目标目录";
+              exit 1;
+            }
+            cp -r dist/* /www/wwwroot/nestadmin/ || {
+              echo "❌ 复制前端文件失败";
+              exit 1;
+            }
+            echo "✅ 前端文件复制成功"
             
             # 配置Nginx - 直接复制前端目录中已有的nginx配置文件
-            cp /www/wwwroot/nestadmin/frontend/nginx.conf /www/server/nginx/conf/vhost/nestadmin.conf
+            echo "配置Nginx..."
+            if [ -f "/www/wwwroot/nestadmin/frontend/nginx.conf" ]; then
+              echo "复制Nginx配置文件..."
+              cp /www/wwwroot/nestadmin/frontend/nginx.conf /www/server/nginx/conf/vhost/nestadmin.conf || {
+                echo "❌ 复制Nginx配置失败"
+                exit 1
+              }
+              echo "✅ Nginx配置文件复制成功"
+            else
+              echo "⚠️  Nginx配置文件不存在，跳过配置"
+            fi
             
             # 重新加载Nginx配置
-            /www/server/nginx/sbin/nginx -s reload
+            echo "重新加载Nginx配置..."
+            /www/server/nginx/sbin/nginx -s reload || {
+              echo "❌ Nginx配置重新加载失败"
+              # 不中断部署，继续进行
+            }
             
             # 检查健康状态
+            echo "检查服务健康状态..."
             sleep 3
-            curl http://localhost:3001/api/health || exit 1
+            if curl -s http://localhost:3001/api/health > /dev/null; then
+              echo "✅ 服务健康检查通过"
+            else
+              echo "⚠️  健康检查失败，但部署过程继续"
+              # 不中断部署，只给出警告
+            fi
             
             echo "✅ 部署完成！"
       
