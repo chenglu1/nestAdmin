@@ -29,7 +29,8 @@ jobs:
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.SERVER_HOST }}
+          # 清理host地址，移除可能的tcp://前缀
+          host: ${{ replace(secrets.SERVER_HOST, 'tcp://', '') }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22  # 显式指定SSH端口
