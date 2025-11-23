@@ -36,9 +36,11 @@ jobs:
           port: 22  # 显式指定SSH端口
           timeout: 60s
           debug: true  # 启用调试模式查看详细信息
-          fingerprint: ''  # 允许连接未知主机
+          fingerprint: ''  # 不验证主机指纹以避免连接问题
           script_stop: true
           script: |
+            # 设置详细输出模式
+            set -x
             # 设置错误时立即退出
             set -e
             
@@ -75,7 +77,6 @@ jobs:
               git clone -b main "$REPO_URL" nestadmin
               cd nestadmin
               echo "✅ 项目克隆成功"
-            }
             fi
             
             # 更新后端
