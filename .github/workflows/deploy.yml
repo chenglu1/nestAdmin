@@ -39,123 +39,121 @@ jobs:
           fingerprint: ''  # 允许连接未知主机
           script_stop: true
           script: |
-            # 拉取最新代码 - 使用GitHub内置变量代替自定义环境变量
-            cd /www/wwwroot || {
-              echo "❌ 无法访问 /www/wwwroot 目录";
+            # 设置错误时立即退出
+            set -e
+            
+            # 输出调试信息
+            echo "🔍 开始部署流程，当前目录: $(pwd)"
+            echo "🔍 服务器主机: ${{ secrets.SERVER_HOST }}"
+            echo "🔍 服务器用户: ${{ secrets.SERVER_USER }}"
+            
+            # 确保目标目录存在
+            echo "📁 检查并创建目标目录..."
+            mkdir -p /www/wwwroot || {
+              echo "❌ 无法创建或访问 /www/wwwroot 目录";
               exit 1;
             }
             
             # 使用GitHub内置变量，避免依赖自定义环境变量
             REPO_URL="https://github.com/${{ github.repository }}.git"
-            echo "正在从 $REPO_URL 拉取代码..."
+            echo "📥 正在从 $REPO_URL 拉取代码..."
+            
+            cd /www/wwwroot
+            echo "📁 当前工作目录: $(pwd)"
             
             if [ -d "nestadmin" ]; then
-              echo "更新已有项目..."
-              cd nestadmin && git fetch origin && git checkout main && git pull origin main || {
-                echo "❌ 更新项目失败";
-                exit 1;
-              }
+              echo "🔄 更新已有项目..."
+              cd nestadmin
+              echo "📁 进入项目目录: $(pwd)"
+              git remote -v  # 检查远程仓库配置
+              git fetch origin
+              git checkout main
+              git pull origin main
+              echo "✅ 项目更新成功"
             else
-              echo "克隆新项目..."
-              git clone -b main "$REPO_URL" nestadmin || {
-                echo "❌ 克隆项目失败";
-                exit 1;
-              }
+              echo "🆕 克隆新项目..."
+              git clone -b main "$REPO_URL" nestadmin
+              cd nestadmin
+              echo "✅ 项目克隆成功"
+            }
             fi
             
             # 更新后端
-            echo "更新后端服务..."
-            cd /www/wwwroot/nestadmin/backend || {
-              echo "❌ 无法访问后端目录";
-              exit 1;
-            }
+            echo "🔧 更新后端服务..."
+            cd /www/wwwroot/nestadmin/backend
+            echo "📁 后端目录: $(pwd)"
             
-            echo "安装后端依赖..."
-            npm install --production || {
-              echo "❌ 后端依赖安装失败";
-              exit 1;
-            }
+            echo "📦 安装后端依赖..."
+            npm install --production --legacy-peer-deps
+            echo "✅ 后端依赖安装成功"
             
-            echo "构建后端项目..."
-            npm run build || {
-              echo "❌ 后端构建失败";
-              exit 1;
-            }
+            echo "🏗️  构建后端项目..."
+            npm run build
+            echo "✅ 后端构建成功"
             
             # 使用宝塔PM2管理器适配的命令
-            echo "重启后端服务..."
+            echo "🔄 重启后端服务..."
             if /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py restart nestAdmin; then
               echo "✅ 后端服务重启成功"
             else
               echo "⚠️  重启失败，尝试添加服务..."
-              /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py add -n nestAdmin -p dist/main.js || {
-                echo "❌ 后端服务部署失败";
-                exit 1;
-              }
+              /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py add -n nestAdmin -p dist/main.js
               echo "✅ 后端服务添加成功"
             fi
             
             # 更新前端
-            echo "更新前端应用..."
-            cd /www/wwwroot/nestadmin/frontend || {
-              echo "❌ 无法访问前端目录";
-              exit 1;
-            }
+            echo "🎨 更新前端应用..."
+            cd /www/wwwroot/nestadmin/frontend
+            echo "📁 前端目录: $(pwd)"
             
-            echo "安装前端依赖..."
-            npm install --production || {
-              echo "❌ 前端依赖安装失败";
-              exit 1;
-            }
+            echo "📦 安装前端依赖..."
+            npm install --production --legacy-peer-deps
+            echo "✅ 前端依赖安装成功"
             
-            echo "构建前端项目..."
-            npm run build || {
-              echo "❌ 前端构建失败";
-              exit 1;
-            }
+            echo "🏗️  构建前端项目..."
+            npm run build
+            echo "✅ 前端构建成功"
             
-            echo "复制前端构建文件..."
-            mkdir -p /www/wwwroot/nestadmin/dist || {
-              echo "❌ 无法创建目标目录";
-              exit 1;
-            }
-            cp -r dist/* /www/wwwroot/nestadmin/ || {
-              echo "❌ 复制前端文件失败";
-              exit 1;
-            }
+            echo "📂 复制前端构建文件..."
+            mkdir -p /www/wwwroot/nestadmin/dist
+            cp -r dist/* /www/wwwroot/nestadmin/dist/
             echo "✅ 前端文件复制成功"
             
             # 配置Nginx - 直接复制前端目录中已有的nginx配置文件
-            echo "配置Nginx..."
+            echo "🌐 配置Nginx..."
             if [ -f "/www/wwwroot/nestadmin/frontend/nginx.conf" ]; then
-              echo "复制Nginx配置文件..."
-              cp /www/wwwroot/nestadmin/frontend/nginx.conf /www/server/nginx/conf/vhost/nestadmin.conf || {
-                echo "❌ 复制Nginx配置失败"
-                exit 1
-              }
+              echo "📋 复制Nginx配置文件..."
+              # 创建备份
+              cp /www/server/nginx/conf/vhost/nestadmin.conf /www/server/nginx/conf/vhost/nestadmin.conf.bak 2>/dev/null || true
+              cp /www/wwwroot/nestadmin/frontend/nginx.conf /www/server/nginx/conf/vhost/nestadmin.conf
               echo "✅ Nginx配置文件复制成功"
             else
               echo "⚠️  Nginx配置文件不存在，跳过配置"
+              ls -la /www/wwwroot/nestadmin/frontend/  # 检查前端目录内容
             fi
             
             # 重新加载Nginx配置
-            echo "重新加载Nginx配置..."
-            /www/server/nginx/sbin/nginx -s reload || {
-              echo "❌ Nginx配置重新加载失败"
-              # 不中断部署，继续进行
-            }
+            echo "🔄 重新加载Nginx配置..."
+            /www/server/nginx/sbin/nginx -t  # 测试配置
+            /www/server/nginx/sbin/nginx -s reload
+            echo "✅ Nginx配置重新加载成功"
             
             # 检查健康状态
-            echo "检查服务健康状态..."
-            sleep 3
-            if curl -s http://localhost:3001/api/health > /dev/null; then
+            echo "🧪 检查服务健康状态..."
+            sleep 5
+            if curl -s http://localhost:3001/api/health > /dev/null 2>&1; then
               echo "✅ 服务健康检查通过"
             else
               echo "⚠️  健康检查失败，但部署过程继续"
               # 不中断部署，只给出警告
             fi
             
-            echo "✅ 部署完成！"
+            echo "🎉 部署完成！"
+            echo "📊 部署摘要："
+            echo "- 项目目录: /www/wwwroot/nestadmin"
+            echo "- 后端状态: 已重启"
+            echo "- 前端状态: 已更新"
+            echo "- Nginx配置: 已重新加载"
       
       - name: Notify on Failure
         if: failure()
