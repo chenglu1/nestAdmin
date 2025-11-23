@@ -20,7 +20,7 @@ jobs:
       
       - name: Build Backend
         working-directory: ./backend
-        run: npm install --production && npm run build
+        run: npm install && npm run build
       
       - name: Build Frontend
         working-directory: ./frontend
@@ -94,5 +94,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            echo "❌ 部署失败！" > /tmp/deploy-error.txt
-            pm2 logs nestAdmin --tail 50 >> /tmp/deploy-error.txt
+            echo "❌ 部署失败！"
+            # 使用绝对路径确保能找到pm2命令
+            /usr/local/bin/pm2 logs nestAdmin --tail 50 || echo "无法获取PM2日志"
