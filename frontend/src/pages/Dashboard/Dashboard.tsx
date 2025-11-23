@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Card, Descriptions, Breadcrumb, Tag } from 'antd';
 import { HomeOutlined, UserOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { getUserProfile, type UserProfile } from '@/api/auth';
-import './Dashboard.less';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -24,21 +23,22 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="dashboard">
+    <div>
       <Breadcrumb
-        style={{ marginBottom: 16 }}
+        className="mb-4"
         items={[
           {
             href: '/home',
-            title: <><HomeOutlined /><span>首页</span></>,
+            title: <><HomeOutlined className="mr-1" /><span>首页</span></>,
           },
         ]}
       />
 
       <Card 
-        title={<><UserOutlined style={{ marginRight: 8 }} />个人信息</>}
+        title={<><UserOutlined className="mr-2" />个人信息</>}
         loading={loading}
         bordered={false}
+        className="mb-4 rounded-lg shadow-sm border border-gray-100 font-semibold"
       >
         {user && (
           <Descriptions column={2} bordered>
@@ -63,13 +63,14 @@ const Dashboard: React.FC = () => {
       <Card 
         title="系统信息" 
         bordered={false}
+        className="rounded-lg shadow-sm border border-gray-100 font-semibold"
       >
         <div className="system-info">
-          <p>✅ 前端: React + TypeScript + Vite + Ant Design</p>
-          <p>✅ 后端: NestJS + TypeORM + MySQL</p>
-          <p>✅ 认证: JWT + Passport</p>
-          <p>✅ 样式: Less + Ant Design Pro 设计规范</p>
-          <p>🎉 用户管理系统已完成!</p>
+          <p className="text-base leading-8 mb-0">✅ 前端: React + TypeScript + Vite + Ant Design</p>
+          <p className="text-base leading-8 mb-0">✅ 后端: NestJS + TypeORM + MySQL</p>
+          <p className="text-base leading-8 mb-0">✅ 认证: JWT + Passport</p>
+          <p className="text-base leading-8 mb-0">✅ 样式: Tailwind CSS + Ant Design Pro 设计规范</p>
+          <p className="text-base leading-8 mb-0">🎉 用户管理系统已完成!</p>
         </div>
       </Card>
     </div>

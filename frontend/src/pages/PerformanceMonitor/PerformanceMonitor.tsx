@@ -16,7 +16,7 @@ import {
   type TimeSeriesData,
   type PerformanceMetric,
 } from '@/api/performance';
-import './PerformanceMonitor.less';
+
 
 const { RangePicker } = DatePicker;
 
@@ -146,7 +146,7 @@ const PerformanceMonitor: React.FC = () => {
       width: 120,
       align: 'center' as const,
       render: (time: number) => (
-        <span style={{ color: time > 1000 ? '#ff4d4f' : '#faad14' }}>
+        <span className={`${time > 1000 ? 'text-red-500' : 'text-orange-400'}`}>
           {time.toFixed(2)}ms
         </span>
       ),
@@ -168,8 +168,8 @@ const PerformanceMonitor: React.FC = () => {
   ];
 
   return (
-    <div className="performance-monitor">
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+    <div className="p-6 bg-gray-50 min-h-[calc(100vh-64px)]">
+      <Space direction="vertical" size="large" className="w-full">
         {/* 操作栏 */}
         <Card>
           <Space>
@@ -195,45 +195,49 @@ const PerformanceMonitor: React.FC = () => {
         {/* 关键指标卡片 */}
         <Row gutter={16}>
           <Col span={6}>
-            <Card>
+            <Card className="rounded-lg shadow-sm">
               <Statistic
                 title="平均响应时间"
                 value={stats?.avgResponseTime || 0}
                 suffix="ms"
                 prefix={<ClockCircleOutlined />}
                 valueStyle={{ color: '#1890ff' }}
+                className="text-lg font-semibold"
               />
             </Card>
           </Col>
           <Col span={6}>
-            <Card>
+            <Card className="rounded-lg shadow-sm">
               <Statistic
                 title="总请求数"
                 value={stats?.totalRequests || 0}
                 prefix={<ThunderboltOutlined />}
                 valueStyle={{ color: '#52c41a' }}
+                className="text-lg font-semibold"
               />
             </Card>
           </Col>
           <Col span={6}>
-            <Card>
+            <Card className="rounded-lg shadow-sm">
               <Statistic
                 title="错误率"
                 value={stats?.errorRate || 0}
                 suffix="%"
                 prefix={<WarningOutlined />}
                 valueStyle={{ color: parseFloat(stats?.errorRate || '0') > 1 ? '#ff4d4f' : '#52c41a' }}
+                className="text-lg font-semibold"
               />
             </Card>
           </Col>
           <Col span={6}>
-            <Card>
+            <Card className="rounded-lg shadow-sm">
               <Statistic
                 title="最大响应时间"
                 value={stats?.maxResponseTime || 0}
                 suffix="ms"
                 prefix={<CheckCircleOutlined />}
                 valueStyle={{ color: (stats?.maxResponseTime || 0) > 1000 ? '#ff4d4f' : '#faad14' }}
+                className="text-lg font-semibold"
               />
             </Card>
           </Col>
@@ -242,25 +246,25 @@ const PerformanceMonitor: React.FC = () => {
         {/* 图表区域 */}
         <Row gutter={16}>
           <Col span={12}>
-            <Card>
-              <ReactECharts option={responseTimeOption} style={{ height: 300 }} />
+            <Card className="rounded-lg shadow-sm">
+              <ReactECharts option={responseTimeOption} className="h-[300px]" />
             </Card>
           </Col>
           <Col span={12}>
-            <Card>
-              <ReactECharts option={requestCountOption} style={{ height: 300 }} />
+            <Card className="rounded-lg shadow-sm">
+              <ReactECharts option={requestCountOption} className="h-[300px]" />
             </Card>
           </Col>
         </Row>
 
         <Row gutter={16}>
           <Col span={24}>
-            <Card title="状态码分布" className="chart-card">
-              <ReactECharts option={statusCodeOption} style={{ flex: 1 }} />
+            <Card title="状态码分布" className="rounded-lg shadow-sm h-[350px] flex flex-col">
+              <ReactECharts option={statusCodeOption} className="flex-1" />
             </Card>
           </Col>
           <Col span={24}>
-            <Card title="Top 10 慢接口" bordered className="table-card">
+            <Card title="Top 10 慢接口" bordered className="rounded-lg shadow-sm h-[500px] flex flex-col">
               <Table
                 dataSource={metrics || []}
                 columns={slowEndpointsColumns}
@@ -269,7 +273,7 @@ const PerformanceMonitor: React.FC = () => {
                 rowKey={(record) => `${record.method}-${record.path}-${record.createdAt}`}
                 bordered
                 scroll={{ x: 800, y: 400 }}
-                style={{ minWidth: '100%' }}
+                className="min-w-full flex-1 flex flex-col"
                 sticky={false}
               />
             </Card>

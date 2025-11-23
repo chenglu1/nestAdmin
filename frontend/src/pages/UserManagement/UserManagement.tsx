@@ -6,7 +6,6 @@ import type { ColumnsType } from 'antd/es/table';
 import { getUserList } from '@/api/user';
 import { getRoleList, assignRolesToUser, getUserRoles } from '@/api/role';
 import request from '@/utils/request';
-import './UserManagement.less';
 
 interface User {
   id: number;
@@ -246,11 +245,11 @@ const UserManagement: React.FC = () => {
       width: 120,
       render: (status: number, record: User) => (
         <Switch
-          checked={status === 1}
-          onChange={() => handleToggleStatus(record)}
-          checkedChildren="启用"
-          unCheckedChildren="禁用"
-        />
+              checked={status === 1}
+              onChange={() => handleToggleStatus(record)}
+              checkedChildren="启用"
+              unCheckedChildren="禁用"
+            />
       ),
     },
     {
@@ -266,61 +265,67 @@ const UserManagement: React.FC = () => {
       render: (_, record) => (
         <Space size="middle">
           <Button
-            type="link"
-            icon={<KeyOutlined />}
-            onClick={() => handleAssignRoles(record)}
-          >
-            分配角色
-          </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定要删除这个用户吗?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-            disabled={record.username === 'admin'}
-          >
+              type="link"
+              icon={<KeyOutlined />}
+              onClick={() => handleAssignRoles(record)}
+              className="h-auto p-0 hover:opacity-80"
+            >
+              分配角色
+            </Button>
             <Button
               type="link"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => handleOpenModal(record)}
+              className="h-auto p-0 hover:opacity-80"
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确定要删除这个用户吗?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="确定"
+              cancelText="取消"
               disabled={record.username === 'admin'}
             >
-              删除
-            </Button>
-          </Popconfirm>
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={record.username === 'admin'}
+                className="h-auto p-0 hover:opacity-80"
+              >
+                删除
+              </Button>
+            </Popconfirm>
         </Space>
       ),
     },
   ];
 
   return (
-    <div className="user-management">
+    <div>
       <Breadcrumb
-        style={{ marginBottom: 16 }}
+        className="mb-4"
         items={[
           {
             href: '/home',
-            title: <><HomeOutlined /><span>首页</span></>,
+            title: <><HomeOutlined className="mr-1" /><span>首页</span></>,
           },
           {
-            title: <><UserOutlined /><span>用户管理</span></>,
+            title: <><UserOutlined className="mr-1" /><span>用户管理</span></>,
           },
         ]}
       />
       
       <Card
         bordered={false}
-        style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,.03)' }}
+        className="shadow-sm"
       >
-        <div className="page-header">
-          <h2>用户管理</h2>
+        <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-800 m-0 flex items-center">
+            <span className="inline-block w-1 h-5 bg-blue-500 mr-3 rounded"></span>
+            用户管理
+          </h2>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -331,7 +336,7 @@ const UserManagement: React.FC = () => {
         </div>
 
         {/* 查询表单 */}
-        <Card style={{ marginBottom: 16, backgroundColor: '#fafafa' }} bordered={false}>
+        <Card className="mb-4 bg-gray-50" bordered={false}>
           <Form
             form={queryForm}
             layout="vertical"
@@ -393,6 +398,7 @@ const UserManagement: React.FC = () => {
           dataSource={users}
           rowKey="id"
           loading={loading}
+          className="bg-white"
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.limit,

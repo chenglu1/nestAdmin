@@ -4,7 +4,6 @@ import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, message,
 import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, MenuOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getMenuList, createMenu, updateMenu, deleteMenu } from '@/api/menu';
-import './MenuManagement.less';
 
 interface Menu {
   id: number;
@@ -153,49 +152,54 @@ const MenuManagement: React.FC = () => {
       render: (_, record) => (
         <Space>
           <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定删除此菜单吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button
               type="link"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              className="h-auto p-0 hover:opacity-80"
             >
-              删除
+              编辑
             </Button>
-          </Popconfirm>
+            <Popconfirm
+              title="确定删除此菜单吗？"
+              onConfirm={() => handleDelete(record.id)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                className="h-auto p-0 hover:opacity-80"
+              >
+                删除
+              </Button>
+            </Popconfirm>
         </Space>
       ),
     },
   ];
 
   return (
-    <div className="menu-management">
+    <div>
       <Breadcrumb
-        style={{ marginBottom: 16 }}
+        className="mb-4"
         items={[
           {
             href: '/home',
-            title: <><HomeOutlined /><span>首页</span></>,
+            title: <><HomeOutlined className="mr-1" /><span>首页</span></>,
           },
           {
-            title: <><MenuOutlined /><span>菜单管理</span></>,
+            title: <><MenuOutlined className="mr-1" /><span>菜单管理</span></>,
           },
         ]}
       />
 
-      <Card bordered={false} style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,.03)' }}>
-        <div className="page-header">
-          <h2>菜单管理</h2>
+      <Card bordered={false} className="shadow-sm font-semibold">
+        <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-800 m-0 flex items-center">
+            <span className="inline-block w-1 h-5 bg-blue-500 mr-3 rounded"></span>
+            菜单管理
+          </h2>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -215,6 +219,7 @@ const MenuManagement: React.FC = () => {
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
           }}
+          className="bg-white"
         />
       </Card>
 
@@ -257,12 +262,12 @@ const MenuManagement: React.FC = () => {
             name="icon"
           >
             <Select placeholder="选择图标">
-              <Select.Option value="HomeOutlined">HomeOutlined</Select.Option>
-              <Select.Option value="UserOutlined">UserOutlined</Select.Option>
-              <Select.Option value="TeamOutlined">TeamOutlined</Select.Option>
-              <Select.Option value="MenuOutlined">MenuOutlined</Select.Option>
-              <Select.Option value="SafetyOutlined">SafetyOutlined</Select.Option>
-              <Select.Option value="SettingOutlined">SettingOutlined</Select.Option>
+              <Select.Option value="HomeOutlined" children="HomeOutlined" />
+              <Select.Option value="UserOutlined" children="UserOutlined" />
+              <Select.Option value="TeamOutlined" children="TeamOutlined" />
+              <Select.Option value="MenuOutlined" children="MenuOutlined" />
+              <Select.Option value="SafetyOutlined" children="SafetyOutlined" />
+              <Select.Option value="SettingOutlined" children="SettingOutlined" />
             </Select>
           </Form.Item>
 
@@ -295,8 +300,8 @@ const MenuManagement: React.FC = () => {
             rules={[{ required: true, message: '请选择类型' }]}
           >
             <Select>
-              <Select.Option value={1}>菜单</Select.Option>
-              <Select.Option value={2}>按钮</Select.Option>
+              <Select.Option value={1} children="菜单" />
+              <Select.Option value={2} children="按钮" />
             </Select>
           </Form.Item>
 
@@ -306,8 +311,8 @@ const MenuManagement: React.FC = () => {
             rules={[{ required: true, message: '请选择状态' }]}
           >
             <Select>
-              <Select.Option value={1}>启用</Select.Option>
-              <Select.Option value={0}>禁用</Select.Option>
+              <Select.Option value={1} children="启用" />
+              <Select.Option value={0} children="禁用" />
             </Select>
           </Form.Item>
         </Form>

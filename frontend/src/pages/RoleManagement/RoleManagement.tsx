@@ -5,7 +5,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, SafetyOutline
 import type { ColumnsType } from 'antd/es/table';
 import { getRoleList, createRole, updateRole, deleteRole, assignMenusToRole, getRoleMenus } from '@/api/role';
 import { getMenuTree } from '@/api/menu';
-import './RoleManagement.less';
+
 
 interface Role {
   id: number;
@@ -227,9 +227,8 @@ const RoleManagement: React.FC = () => {
   ];
 
   return (
-    <div className="role-management">
-      <Breadcrumb
-        style={{ marginBottom: 16 }}
+    <div>
+      <Breadcrumb className="mb-4"
         items={[
           {
             href: '/home',
@@ -241,9 +240,12 @@ const RoleManagement: React.FC = () => {
         ]}
       />
 
-      <Card bordered={false} style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,.03)' }}>
-        <div className="page-header">
-          <h2>角色管理</h2>
+      <Card bordered={false} className="shadow-sm rounded-lg border border-gray-100">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+            <span className="w-1 h-5 bg-blue-500 rounded-sm mr-3"></span>
+            角色管理
+          </h2>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -326,7 +328,7 @@ const RoleManagement: React.FC = () => {
         onCancel={() => setIsPermissionModalOpen(false)}
         width={600}
       >
-        <div style={{ marginTop: 20, maxHeight: 400, overflow: 'auto' }}>
+        <div className="mt-5 max-h-[400px] overflow-auto">
           <Tree
             checkable
             treeData={menuTree}
@@ -349,6 +351,7 @@ const RoleManagement: React.FC = () => {
               setCheckedKeys(numberKeys);
             }}
             defaultExpandAll
+            className="space-y-1"
           />
         </div>
       </Modal>

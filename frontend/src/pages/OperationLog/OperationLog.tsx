@@ -31,7 +31,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { getLogList, deleteLog, clearAllLogs, type OperationLog } from '@/api/log';
 import LogDetailDrawer from './LogDetailDrawer';
-import './OperationLog.less';
+
 
 const { confirm } = Modal;
 const { Text } = Typography;
@@ -257,17 +257,17 @@ const OperationLog: React.FC = () => {
   ];
 
   return (
-    <div className="operation-log-container">
+    <div className="p-6">
       <Card>
         {/* 搜索表单 */}
-        <Form form={form} layout="inline" className="search-form">
-          <Form.Item name="username" label="用户名">
+        <Form form={form} layout="inline" className="mb-4">
+          <Form.Item name="username" label="用户名" className="mb-4">
             <Input placeholder="请输入用户名" allowClear />
           </Form.Item>
-          <Form.Item name="module" label="操作模块">
+          <Form.Item name="module" label="操作模块" className="mb-4">
             <Input placeholder="请输入操作模块" allowClear />
           </Form.Item>
-          <Form.Item>
+          <Form.Item className="mb-4">
             <Space>
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                 搜索
@@ -303,7 +303,7 @@ const OperationLog: React.FC = () => {
             onChange: handleTableChange,
             onShowSizeChange: handleTableChange,
           }}
-          style={{ marginTop: 16 }}
+          className="mt-4 text-sm"
         />
       </Card>
 
@@ -318,3 +318,4 @@ const OperationLog: React.FC = () => {
 };
 
 export default OperationLog;
+
