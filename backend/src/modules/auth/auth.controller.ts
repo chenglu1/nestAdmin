@@ -133,7 +133,7 @@ export class AuthController {
       hasUser: !!req?.user,
     };
     
-    this.logger.log(`登出请求开始: ${JSON.stringify(requestContext)}`);
+    this.logger.debug(`登出请求开始: ${JSON.stringify(requestContext)}`);
     
     try {
       // 尝试获取刷新令牌 - 增加更详细的日志
@@ -144,29 +144,29 @@ export class AuthController {
         const bodyTokenExists = req && req.body && typeof req.body === 'object' && req.body.refreshToken !== undefined;
         const headerTokenExists = req && req.headers && typeof req.headers === 'object' && req.headers['x-refresh-token'] !== undefined;
         
-        this.logger.log(`令牌来源检查 - Cookie: ${cookieTokenExists}, Body: ${bodyTokenExists}, Header: ${headerTokenExists}`);
+        this.logger.debug(`令牌来源检查 - Cookie: ${cookieTokenExists}, Body: ${bodyTokenExists}, Header: ${headerTokenExists}`);
         
         // 更严格的安全检查，确保每个属性都存在
         if (cookieTokenExists) {
           refreshToken = String(req.cookies.refreshToken);
-          this.logger.log('从Cookie获取到刷新令牌');
+          this.logger.debug('从Cookie获取到刷新令牌');
         } else if (bodyTokenExists) {
           refreshToken = String(req.body.refreshToken);
-          this.logger.log('从请求体获取到刷新令牌');
+          this.logger.debug('从请求体获取到刷新令牌');
         } else if (headerTokenExists) {
           refreshToken = String(req.headers['x-refresh-token']);
-          this.logger.log('从请求头获取到刷新令牌');
+          this.logger.debug('从请求头获取到刷新令牌');
         } else {
-          this.logger.warn('未找到刷新令牌');
+          this.logger.debug('未找到刷新令牌');
         }
         
         // 尝试验证和吊销单个令牌
         if (refreshToken) {
           try {
             await this.authService.revokeRefreshToken(refreshToken);
-            this.logger.log('成功吊销单个刷新令牌');
+            this.logger.debug('成功吊销单个刷新令牌');
           } catch (e) {
-            this.logger.warn('吊销单个令牌失败，但继续登出流程', (e as any)?.message || 'Unknown error');
+            this.logger.debug('吊销单个令牌失败，但继续登出流程', (e as any)?.message || 'Unknown error');
           }
         }
       } catch (e) {
@@ -181,7 +181,7 @@ export class AuthController {
       try {
         if (req?.user) {
           const user = req.user as any;
-          this.logger.log(`用户信息存在: ${user?.username || '未知用户'}`);
+          this.logger.debug(`用户信息存在: ${user?.username || '未知用户'}`);
           
           const possibleIds = [
             user.id,
@@ -198,7 +198,7 @@ export class AuthController {
               const numId = typeof id === 'string' ? parseInt(id, 10) : id;
               if (typeof numId === 'number' && !isNaN(numId) && numId > 0) {
                 userId = numId;
-                this.logger.log(`找到有效的用户ID: ${userId}`);
+                this.logger.debug(`找到有效的用户ID: ${userId}`);
                 break;
               }
             }
@@ -208,7 +208,7 @@ export class AuthController {
           if (userId) {
             try {
               await this.authService.revokeAllUserRefreshTokens(userId);
-              this.logger.log(`成功吊销用户ID ${userId} 的所有令牌`);
+              this.logger.debug(`成功吊销用户ID ${userId} 的所有令牌`);
             } catch (e) {
               this.logger.warn(`吊销用户ID ${userId} 的所有令牌失败，但继续登出流程`, (e as any)?.message || 'Unknown error');
             }
@@ -234,13 +234,13 @@ export class AuthController {
           sameSite: 'strict',
           path: '/api/auth/refresh'
         });
-        this.logger.log('已清除响应中的refreshToken Cookie');
+        this.logger.debug('已清除响应中的refreshToken Cookie');
       } catch (e) {
-        this.logger.warn('清除Cookie失败，但继续登出流程', (e as any)?.message || 'Unknown error');
+        this.logger.debug('清除Cookie失败，但继续登出流程', (e as any)?.message || 'Unknown error');
       }
       
       // 总是返回成功，无论内部操作是否成功
-      this.logger.log('登出请求完成');
+      this.logger.debug('登出请求完成');
       return res.status(200).json({
         code: 200,
         message: '注销成功'
