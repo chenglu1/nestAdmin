@@ -137,7 +137,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Deploy to server via SSH
+    - name: Deploy to Baota server via SSH
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.SERVER_HOST }}
@@ -145,10 +145,54 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT }}
         script: |
-          cd /opt/nestadmin
-          docker-compose pull
-          docker-compose up -d
-          docker system prune -f
+          # 适配宝塔服务器部署
+          cd /www/wwwroot
+          git clone -b main ${{ secrets.REPOSITORY_URL }} nestadmin || (cd nestadmin && git fetch origin && git checkout main && git pull origin main)
+          
+          # 后端部署
+          cd /www/wwwroot/nestadmin/backend
+          npm install --production
+          npm run build
+          # 使用宝塔PM2管理器
+          /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py restart nestAdmin || /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py add -n nestAdmin -p dist/main.js
+          
+          # 前端部署
+          cd /www/wwwroot/nestadmin/frontend
+          npm install --production
+          npm run build
+          cp -r dist/* /www/wwwroot/nestadmin/
+          
+          # 配置Nginx（创建或更新配置文件）
+          cat > /www/server/nginx/conf/vhost/nestadmin.conf << 'EOF'
+server {
+    listen 80;
+    server_name _;
+    root /www/wwwroot/nestadmin;
+    index index.html index.htm;
+    
+    # 静态文件缓存
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+        expires 30d;
+    }
+    
+    # 后端API代理
+    location /api {
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # 前端路由支持（SPA）
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
+          
+          # 重新加载Nginx配置
+          /www/server/nginx/sbin/nginx -s reload
 
     - name: Deployment notification
       if: success()
