@@ -36,176 +36,126 @@ export class PerformanceInterceptor implements NestInterceptor {
   constructor(private performanceService: PerformanceService) {}
 
   /**
-   * 安全的JSON序列化方法 - 更健壮的实现
+   * 安全的JSON序列化方法 - 更健壮的实现，完全避免循环引用问题
    */
-  private safeStringify(obj: any): string {
-    // 终极安全的序列化方法，避免任何可能的循环引用问题
+  // safeStringify 方法已移除，我们现在使用更安全的估算方法
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     try {
-      // 对于生产环境，使用超简化的对象表示，完全避免序列化复杂对象
-      if (process.env.NODE_ENV === 'production') {
-        if (obj === null) return 'null';
-        if (obj === undefined) return 'undefined';
-        if (typeof obj !== 'object') return String(obj);
-        if (Array.isArray(obj)) {
-          return `[Array(${obj.length})]`;
-        }
-        return '{...object}';
+      // 安全地获取HTTP上下文，防止非HTTP请求导致的错误
+      if (!context.switchToHttp) {
+        return next.handle();
       }
       
-      // 开发环境可以有更详细的序列化，但仍然非常小心
-      // 快速处理常见的简单类型
-      if (obj === null) return 'null';
-      if (obj === undefined) return 'undefined';
-      if (typeof obj !== 'object') return JSON.stringify(obj);
+      const httpContext = context.switchToHttp();
+      if (!httpContext.getRequest) {
+        return next.handle();
+      }
       
-      // 使用WeakMap来跟踪已经处理过的对象，避免循环引用
-      const seen = new WeakMap<any, boolean>();
+      const request = httpContext.getRequest();
+      if (!request) {
+        return next.handle();
+      }
       
-      // 创建一个简化对象的递归函数
-      const simplify = (value: any): any => {
-        try {
-          // 基本类型直接返回
-          if (value === null || typeof value !== 'object') return value;
-          
-          // 检查是否已经处理过这个对象
-          if (seen.has(value)) return '[CircularReference]';
-          
-          // 标记这个对象已经处理过
-          seen.set(value, true);
-          
-          // 处理问题对象类型 - 扩展了更多可能导致问题的类型
-          const constructorName = value.constructor?.name;
-          if (constructorName && [
-            'Socket', 'HTTPParser', 'ServerResponse', 'IncomingMessage',
-            'Stream', 'Buffer', 'EventEmitter', 'Function', 'Promise',
-            'RegExp', 'Date', 'Map', 'Set', 'URL', 'URLSearchParams',
-            'File', 'Blob', 'ReadableStream', 'WritableStream'
-          ].includes(constructorName)) {
-            return `[${constructorName}]`;
-          }
-          
-          // 处理数组 - 更保守的数组处理
-          if (Array.isArray(value)) {
-            // 限制数组长度，避免过大的数据
-            if (value.length > 5) {
-              return `[Array(${value.length})]`;
-            }
-            // 确保数组中的每个元素都能被安全处理
-            const result = [];
-            for (let i = 0; i < value.length; i++) {
-              try {
-                result.push(simplify(value[i]));
-              } catch (e) {
-                result.push('[Error]');
+      // 安全地获取请求信息
+      const method = request.method || 'UNKNOWN';
+      const originalUrl = request.originalUrl || '/unknown';
+      
+      // 避免解构赋值导致的潜在错误
+      let body: any = null;
+      let query: any = null;
+      let params: any = null;
+      let user: any = null;
+      
+      try {
+        body = request.body;
+        query = request.query;
+        params = request.params;
+        user = request.user;
+      } catch {
+        // 忽略任何获取请求属性时的错误
+      }
+      
+      const startTime = Date.now();
+      const startMemory = process.memoryUsage();
+      const startCpu = process.cpuUsage();
+
+      // 极其简化的请求数据表示，完全避免任何可能的序列化问题
+      const safeRequestData = {
+        body: body ? true : false,
+        queryCount: query && typeof query === 'object' ? Object.keys(query).length : 0,
+        paramsCount: params && typeof params === 'object' ? Object.keys(params).length : 0,
+      };
+
+      return next.handle().pipe(
+        tap((data) => {
+          try {
+            // 估算响应大小，完全避免序列化响应数据
+            let estimatedResponseSize = 0;
+            try {
+              if (data === null || data === undefined) {
+                estimatedResponseSize = 0;
+              } else if (typeof data === 'object') {
+                estimatedResponseSize = 1000; // 给一个合理的估算值
+              } else {
+                estimatedResponseSize = String(data).length;
               }
-            }
-            return result;
-          }
-          
-          // 处理普通对象 - 更保守的对象处理
-          const simplifiedObj: Record<string, any> = {};
-          // 只处理最基本的几个属性
-          const keys = Object.keys(value).slice(0, 5);
-          
-          // 扩展的问题键名列表
-          const problemKeys = ['_events', '_eventsCount', '_maxListeners', 'socket', 'parser', 
-                              'res', 'req', 'buffer', 'stack', '__proto__', 'client', 'server',
-                              '_httpMessage', '_connectionKey', '_readableState', '_writableState'];
-          
-          for (const key of keys) {
-            // 跳过问题键名
-            if (problemKeys.includes(key)) {
-              simplifiedObj[key] = '[Skipped]';
-              continue;
+            } catch {
+              estimatedResponseSize = 0;
             }
             
-            try {
-              simplifiedObj[key] = simplify(value[key]);
-            } catch (e) {
-              simplifiedObj[key] = '[Error]';
-            }
+            const metrics = this.buildMetrics(
+              method,
+              originalUrl,
+              200,
+              Date.now() - startTime,
+              safeRequestData,
+              estimatedResponseSize,
+              request,
+              user,
+              startMemory,
+              startCpu,
+            );
+            this.saveMetrics(metrics);
+            this.checkSlowRequest(metrics);
+          } catch (metricsError: any) {
+            // 如果构建指标失败，记录错误但不中断流程
+            this.logger.error('构建性能指标失败', metricsError?.message || 'Unknown error');
           }
-          
-          // 如果对象有更多属性，添加标记
-          if (Object.keys(value).length > 5) {
-            simplifiedObj['_moreProps'] = Object.keys(value).length - 5;
+        }),
+        catchError((error) => {
+          try {
+            // 即使在错误情况下，也尝试构建指标
+            const metrics = this.buildMetrics(
+              method,
+              originalUrl,
+              error?.status || 500,
+              Date.now() - startTime,
+              safeRequestData,
+              0,
+              request,
+              user,
+              startMemory,
+              startCpu,
+              error?.message,
+            );
+            this.saveMetrics(metrics);
+          } catch (metricsError: any) {
+            // 如果构建指标失败，记录错误但不中断流程
+            this.logger.error('构建错误性能指标失败', metricsError?.message || 'Unknown error');
           }
-          
-          return simplifiedObj;
-        } catch (e) {
-          // 单个值简化失败时的兜底
-          return '[Error]';
-        }
-      };
-      
-      // 使用简化函数处理对象
-      const simplified = simplify(obj);
-      // 再次尝试捕获JSON.stringify可能抛出的错误
-      try {
-        return JSON.stringify(simplified);
-      } catch (jsonError) {
-        return '{"simplified":"true"}';
-      }
-    } catch (error) {
-      // 终极兜底：如果所有方法都失败，返回一个完全静态的字符串
-      return '{"serialized":false}';
+          return throwError(() => error);
+        }),
+      );
+    } catch (contextError: any) {
+      // 如果整个拦截器初始化失败，记录错误并继续处理请求
+      this.logger.error('性能拦截器初始化失败', contextError?.message || 'Unknown error');
+      return next.handle();
     }
   }
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
-    const { method, originalUrl, body, query, params } = request;
-    const user = request.user;
-    const startTime = Date.now();
-    const startMemory = process.memoryUsage();
-    const startCpu = process.cpuUsage();
-
-    // 预处理请求数据，避免循环引用
-    const safeRequestData = {
-      body: body ? 'request-body-data' : undefined,
-      query: typeof query === 'object' ? Object.keys(query).length : 0,
-      params: typeof params === 'object' ? Object.keys(params).length : 0,
-    };
-
-    return next.handle().pipe(
-      tap((data) => {
-        const metrics = this.buildMetrics(
-          method,
-          originalUrl,
-          200,
-          Date.now() - startTime,
-          safeRequestData,
-          this.safeStringify(data).length,
-          request,
-          user,
-          startMemory,
-          startCpu,
-        );
-        this.saveMetrics(metrics);
-        this.checkSlowRequest(metrics);
-      }),
-      catchError((error) => {
-        const metrics = this.buildMetrics(
-          method,
-          originalUrl,
-          error.status || 500,
-          Date.now() - startTime,
-          safeRequestData,
-          0,
-          request,
-          user,
-          startMemory,
-          startCpu,
-          error.message,
-        );
-        this.saveMetrics(metrics);
-        return throwError(() => error);
-      }),
-    );
-  }
-
   /**
-   * 构建性能指标
+   * 构建性能指标 - 完全避免序列化复杂对象
    */
   private buildMetrics(
     method: string,
@@ -220,26 +170,72 @@ export class PerformanceInterceptor implements NestInterceptor {
     startCpu: NodeJS.CpuUsage,
     errorMessage?: string,
   ): PerformanceMetrics {
+    // 安全地计算请求大小，完全避免复杂序列化
+    let requestSize = 0;
+    try {
+      if (requestData && typeof requestData === 'object') {
+        if (requestData.body) requestSize += 100; // 估算值
+        if (requestData.query) requestSize += 50; // 估算值
+        if (requestData.params) requestSize += 30; // 估算值
+      }
+    } catch {
+      requestSize = 0;
+    }
+    
+    // 安全地获取用户信息
+    let userId: number | undefined;
+    let username: string | undefined;
+    try {
+      if (user && typeof user === 'object') {
+        // 按优先级尝试获取用户ID
+        const possibleIds = [user.userId, user.id];
+        for (const id of possibleIds) {
+          if (id !== undefined && id !== null) {
+            const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+            if (typeof numId === 'number' && !isNaN(numId)) {
+              userId = numId;
+              break;
+            }
+          }
+        }
+        // 安全地获取用户名
+        if (user.username) {
+          username = String(user.username);
+        }
+      }
+    } catch {
+      // 如果无法获取用户信息，保持为undefined
+    }
+    
+    // 安全地获取其他请求信息
+    let ipAddress = '';
+    let userAgent = '';
+    try {
+      ipAddress = getClientIp(request) || '';
+      userAgent = request?.headers?.['user-agent'] ? String(request.headers['user-agent']) : '';
+    } catch {
+      // 如果无法获取请求信息，使用默认值
+    }
+    
+    // 计算资源使用情况
     const endMemory = process.memoryUsage();
     const endCpu = process.cpuUsage(startCpu);
-
+    
+    // 只返回必要的指标，完全避免任何可能包含循环引用的对象
     return {
-      method,
-      path,
-      statusCode,
-      responseTime,
-      requestSize: this.safeStringify(requestData).length,
-      responseSize,
-      ipAddress: getClientIp(request),
-      userAgent: request.headers?.['user-agent'] || '',
-      // 修复用户属性访问，支持JWT默认的sub和username
-      userId: user?.userId || user?.id || (user?.sub && typeof user.sub === 'number' ? user.sub : (user?.sub && typeof user.sub === 'string' ? parseInt(user.sub, 10) : undefined)),
-      username: user?.username,
-      cpuUsage: parseFloat(
-        ((endCpu.user + endCpu.system) / 1000).toFixed(2),
-      ),
+      method: method || '',
+      path: path || '',
+      statusCode: statusCode || 0,
+      responseTime: responseTime || 0,
+      requestSize,
+      responseSize: responseSize || 0,
+      ipAddress,
+      userAgent: userAgent.substring(0, 200), // 限制长度
+      userId,
+      username,
+      cpuUsage: parseFloat(((endCpu.user + endCpu.system) / 1000).toFixed(2)),
       memoryUsage: endMemory.heapUsed - startMemory.heapUsed,
-      errorMessage,
+      errorMessage: errorMessage ? errorMessage.substring(0, 200) : undefined, // 限制长度
     };
   }
 
