@@ -147,17 +147,22 @@ export class AuthController {
         this.logger.debug(`令牌来源检查 - Cookie: ${cookieTokenExists}, Body: ${bodyTokenExists}, Header: ${headerTokenExists}`);
         
         // 更严格的安全检查，确保每个属性都存在
-        if (cookieTokenExists) {
+        if (cookieTokenExists && req.cookies) {
           refreshToken = String(req.cookies.refreshToken);
           this.logger.debug('从Cookie获取到刷新令牌');
-        } else if (bodyTokenExists) {
+        } else if (bodyTokenExists && req.body) {
           refreshToken = String(req.body.refreshToken);
           this.logger.debug('从请求体获取到刷新令牌');
-        } else if (headerTokenExists) {
+        } else if (headerTokenExists && req.headers) {
           refreshToken = String(req.headers['x-refresh-token']);
           this.logger.debug('从请求头获取到刷新令牌');
         } else {
           this.logger.debug('未找到刷新令牌');
+          // 如果没有找到刷新令牌，直接返回400错误
+          return res.status(HttpStatus.BAD_REQUEST).json({
+            code: 400,
+            message: '缺少刷新令牌',
+          });
         }
         
         // 尝试验证和吊销单个令牌

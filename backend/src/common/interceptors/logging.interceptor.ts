@@ -32,6 +32,22 @@ interface LogContext {
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger(LoggingInterceptor.name);
+  
+  /**
+   * 安全的JSON序列化方法，避免循环引用问题
+   */
+  private safeStringify(obj: any): string {
+    const seen = new WeakSet();
+    return JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular]';
+        }
+        seen.add(value);
+      }
+      return value;
+    });
+  }
 
   constructor(
     private reflector: Reflector,
@@ -61,7 +77,7 @@ export class LoggingInterceptor implements NestInterceptor {
         this.saveLog({
           ...logContext,
           statusCode: 200,
-          response: JSON.stringify(data),
+          response: this.safeStringify(data),
           duration: Date.now() - startTime,
         });
       }),
@@ -69,7 +85,7 @@ export class LoggingInterceptor implements NestInterceptor {
         this.saveLog({
           ...logContext,
           statusCode: error.status || 500,
-          response: JSON.stringify({ error: error.message }),
+          response: this.safeStringify({ error: error.message }),
           duration: Date.now() - startTime,
         });
         return throwError(() => error);
@@ -94,7 +110,7 @@ export class LoggingInterceptor implements NestInterceptor {
       description: meta.description,
       method,
       path: originalUrl,
-      params: JSON.stringify({ body, query, params }),
+      params: this.safeStringify({ body, query, params }),
       ip: getClientIp(request),
       userAgent: headers['user-agent'] || '',
     };
