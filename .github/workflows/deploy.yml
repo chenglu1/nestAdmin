@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '22.20.0'  # 满足前端要求的Node.js版本
       
       - name: Build Backend
         working-directory: ./backend
@@ -24,7 +24,7 @@ jobs:
       
       - name: Build Frontend
         working-directory: ./frontend
-        run: npm install --production && npm run build
+        run: npm install && npm run build
       
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
@@ -32,6 +32,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22  # 显式指定SSH端口
           script: |
             # 拉取最新代码
             cd /www/wwwroot
@@ -50,32 +51,8 @@ jobs:
             npm run build
             cp -r dist/* /www/wwwroot/nestadmin/
             
-            # 配置Nginx - 使用简单的echo命令替代Here文档
-            echo 'server {' > /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    listen 80;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    server_name _;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    root /www/wwwroot/nestadmin;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    index index.html index.htm;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    ' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    # 静态文件缓存' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '        expires 30d;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    }' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    ' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    # 后端API代理' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    location /api {' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '        proxy_pass http://localhost:3001;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '        proxy_set_header Host $host;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '        proxy_set_header X-Real-IP $remote_addr;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '        proxy_set_header X-Forwarded-Proto $scheme;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    }' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    ' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    # 前端路由支持' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    location / {' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '        try_files $uri $uri/ /index.html;' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '    }' >> /www/server/nginx/conf/vhost/nestadmin.conf
-            echo '}' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            # 配置Nginx - 直接复制前端目录中已有的nginx配置文件
+            cp /www/wwwroot/nestadmin/frontend/nginx.conf /www/server/nginx/conf/vhost/nestadmin.conf
             
             # 重新加载Nginx配置
             /www/server/nginx/sbin/nginx -s reload
@@ -88,12 +65,8 @@ jobs:
       
       - name: Notify on Failure
         if: failure()
-        uses: appleboy/ssh-action@master
+        uses: actions/github-script@v6
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            echo "❌ 部署失败！"
-            # 使用绝对路径确保能找到pm2命令
-            /usr/local/bin/pm2 logs nestAdmin --tail 50 || echo "无法获取PM2日志"
+            console.log('❌ 部署失败！');
+            // 直接在GitHub Actions日志中输出错误信息，避免SSH连接问题
