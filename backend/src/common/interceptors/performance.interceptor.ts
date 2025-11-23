@@ -39,78 +39,116 @@ export class PerformanceInterceptor implements NestInterceptor {
    * 安全的JSON序列化方法 - 更健壮的实现
    */
   private safeStringify(obj: any): string {
-    // 快速处理常见的简单类型
-    if (obj === null) return 'null';
-    if (obj === undefined) return 'undefined';
-    if (typeof obj !== 'object') return JSON.stringify(obj);
-    
-    // 使用WeakMap来跟踪已经处理过的对象，避免循环引用
-    const seen = new WeakMap<any, boolean>();
-    
-    // 创建一个简化对象的递归函数
-    const simplify = (value: any): any => {
-      // 基本类型直接返回
-      if (value === null || typeof value !== 'object') return value;
-      
-      // 检查是否已经处理过这个对象
-      if (seen.has(value)) return '[CircularReference]';
-      
-      // 标记这个对象已经处理过
-      seen.set(value, true);
-      
-      // 处理问题对象类型
-      const constructorName = value.constructor?.name;
-      if (constructorName && [
-        'Socket', 'HTTPParser', 'ServerResponse', 'IncomingMessage',
-        'Stream', 'Buffer', 'EventEmitter', 'Function', 'Promise',
-        'RegExp', 'Date', 'Map', 'Set'
-      ].includes(constructorName)) {
-        return `[${constructorName}]`;
-      }
-      
-      // 处理数组
-      if (Array.isArray(value)) {
-        // 限制数组长度，避免过大的数据
-        if (value.length > 10) {
-          return `[Array(${value.length})]`;
-        }
-        return value.map(item => simplify(item));
-      }
-      
-      // 处理普通对象
-      const simplifiedObj: Record<string, any> = {};
-      const keys = Object.keys(value).slice(0, 10); // 只处理前10个属性
-      
-      for (const key of keys) {
-        // 跳过问题键名
-        if (['_events', '_eventsCount', '_maxListeners', 'socket', 'parser', 
-             'res', 'req', 'buffer', 'stack', '__proto__'].includes(key)) {
-          simplifiedObj[key] = '[Skipped]';
-          continue;
-        }
-        
-        try {
-          simplifiedObj[key] = simplify(value[key]);
-        } catch (e) {
-          simplifiedObj[key] = '[Error]';
-        }
-      }
-      
-      // 如果对象有更多属性，添加标记
-      if (Object.keys(value).length > 10) {
-        simplifiedObj['_moreProps'] = Object.keys(value).length - 10;
-      }
-      
-      return simplifiedObj;
-    };
-    
+    // 终极安全的序列化方法，避免任何可能的循环引用问题
     try {
+      // 对于生产环境，使用超简化的对象表示，完全避免序列化复杂对象
+      if (process.env.NODE_ENV === 'production') {
+        if (obj === null) return 'null';
+        if (obj === undefined) return 'undefined';
+        if (typeof obj !== 'object') return String(obj);
+        if (Array.isArray(obj)) {
+          return `[Array(${obj.length})]`;
+        }
+        return '{...object}';
+      }
+      
+      // 开发环境可以有更详细的序列化，但仍然非常小心
+      // 快速处理常见的简单类型
+      if (obj === null) return 'null';
+      if (obj === undefined) return 'undefined';
+      if (typeof obj !== 'object') return JSON.stringify(obj);
+      
+      // 使用WeakMap来跟踪已经处理过的对象，避免循环引用
+      const seen = new WeakMap<any, boolean>();
+      
+      // 创建一个简化对象的递归函数
+      const simplify = (value: any): any => {
+        try {
+          // 基本类型直接返回
+          if (value === null || typeof value !== 'object') return value;
+          
+          // 检查是否已经处理过这个对象
+          if (seen.has(value)) return '[CircularReference]';
+          
+          // 标记这个对象已经处理过
+          seen.set(value, true);
+          
+          // 处理问题对象类型 - 扩展了更多可能导致问题的类型
+          const constructorName = value.constructor?.name;
+          if (constructorName && [
+            'Socket', 'HTTPParser', 'ServerResponse', 'IncomingMessage',
+            'Stream', 'Buffer', 'EventEmitter', 'Function', 'Promise',
+            'RegExp', 'Date', 'Map', 'Set', 'URL', 'URLSearchParams',
+            'File', 'Blob', 'ReadableStream', 'WritableStream'
+          ].includes(constructorName)) {
+            return `[${constructorName}]`;
+          }
+          
+          // 处理数组 - 更保守的数组处理
+          if (Array.isArray(value)) {
+            // 限制数组长度，避免过大的数据
+            if (value.length > 5) {
+              return `[Array(${value.length})]`;
+            }
+            // 确保数组中的每个元素都能被安全处理
+            const result = [];
+            for (let i = 0; i < value.length; i++) {
+              try {
+                result.push(simplify(value[i]));
+              } catch (e) {
+                result.push('[Error]');
+              }
+            }
+            return result;
+          }
+          
+          // 处理普通对象 - 更保守的对象处理
+          const simplifiedObj: Record<string, any> = {};
+          // 只处理最基本的几个属性
+          const keys = Object.keys(value).slice(0, 5);
+          
+          // 扩展的问题键名列表
+          const problemKeys = ['_events', '_eventsCount', '_maxListeners', 'socket', 'parser', 
+                              'res', 'req', 'buffer', 'stack', '__proto__', 'client', 'server',
+                              '_httpMessage', '_connectionKey', '_readableState', '_writableState'];
+          
+          for (const key of keys) {
+            // 跳过问题键名
+            if (problemKeys.includes(key)) {
+              simplifiedObj[key] = '[Skipped]';
+              continue;
+            }
+            
+            try {
+              simplifiedObj[key] = simplify(value[key]);
+            } catch (e) {
+              simplifiedObj[key] = '[Error]';
+            }
+          }
+          
+          // 如果对象有更多属性，添加标记
+          if (Object.keys(value).length > 5) {
+            simplifiedObj['_moreProps'] = Object.keys(value).length - 5;
+          }
+          
+          return simplifiedObj;
+        } catch (e) {
+          // 单个值简化失败时的兜底
+          return '[Error]';
+        }
+      };
+      
       // 使用简化函数处理对象
       const simplified = simplify(obj);
-      return JSON.stringify(simplified);
+      // 再次尝试捕获JSON.stringify可能抛出的错误
+      try {
+        return JSON.stringify(simplified);
+      } catch (jsonError) {
+        return '{"simplified":"true"}';
+      }
     } catch (error) {
       // 终极兜底：如果所有方法都失败，返回一个完全静态的字符串
-      return '{"error":"Serialization failed"}';
+      return '{"serialized":false}';
     }
   }
 

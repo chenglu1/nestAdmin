@@ -127,11 +127,12 @@ export class AuthController {
       // 尝试获取刷新令牌
       let refreshToken: string | undefined;
       try {
-        if (req?.body?.refreshToken) {
+        // 更严格的安全检查，确保每个属性都存在
+        if (req && req.body && typeof req.body === 'object' && req.body.refreshToken !== undefined) {
           refreshToken = String(req.body.refreshToken);
-        } else if (req?.headers?.['x-refresh-token']) {
+        } else if (req && req.headers && typeof req.headers === 'object' && req.headers['x-refresh-token']) {
           refreshToken = String(req.headers['x-refresh-token']);
-        } else if (req?.cookies?.refreshToken) {
+        } else if (req && req.cookies && typeof req.cookies === 'object' && req.cookies.refreshToken) {
           refreshToken = String(req.cookies.refreshToken);
         }
         
