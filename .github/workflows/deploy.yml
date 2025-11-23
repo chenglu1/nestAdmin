@@ -1,6 +1,5 @@
 name: Auto Deploy to Production
 
-# 触发条件：push 到 main 分支
 on:
   push:
     branches:
@@ -11,31 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. 检出代码
       - name: Checkout code
         uses: actions/checkout@v3
       
-      # 2. 设置 Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
       
-      # 3. 后端构建
       - name: Build Backend
         working-directory: ./backend
-        run: |
-          npm install --production
-          npm run build
+        run: npm install --production && npm run build
       
-      # 4. 前端构建
       - name: Build Frontend
         working-directory: ./frontend
-        run: |
-          npm install --production
-          npm run build
+        run: npm install --production && npm run build
       
-      # 5. 复制到服务器
       - name: Deploy to Server
         uses: appleboy/ssh-action@master
         with:
@@ -54,41 +44,38 @@ jobs:
             # 使用宝塔PM2管理器适配的命令
             /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py restart nestAdmin || /www/server/panel/pyenv/bin/python3 /www/server/panel/tools/pm2_manager.py add -n nestAdmin -p dist/main.js
             
-            # 更新前端（适配宝塔Nginx）
+            # 更新前端
             cd /www/wwwroot/nestadmin/frontend
             npm install --production
             npm run build
-            # 复制到宝塔默认站点目录
             cp -r dist/* /www/wwwroot/nestadmin/
             
-            # 配置Nginx（创建或更新配置文件）
-            cat > /www/server/nginx/conf/vhost/nestadmin.conf << 'EOF'
-server {
-    listen 80;
-    server_name _;
-    root /www/wwwroot/nestadmin;
-    index index.html index.htm;
-    
-    # 静态文件缓存
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
-        expires 30d;
-    }
-    
-    # 后端API代理
-    location /api {
-        proxy_pass http://localhost:3001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    
-    # 前端路由支持（SPA）
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-EOF
+            # 配置Nginx - 使用简单的echo命令替代Here文档
+            echo 'server {' > /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    listen 80;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    server_name _;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    root /www/wwwroot/nestadmin;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    index index.html index.htm;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    ' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    # 静态文件缓存' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '        expires 30d;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    }' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    ' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    # 后端API代理' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    location /api {' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '        proxy_pass http://localhost:3001;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '        proxy_set_header Host $host;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '        proxy_set_header X-Real-IP $remote_addr;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '        proxy_set_header X-Forwarded-Proto $scheme;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    }' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    ' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    # 前端路由支持' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    location / {' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '        try_files $uri $uri/ /index.html;' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '    }' >> /www/server/nginx/conf/vhost/nestadmin.conf
+            echo '}' >> /www/server/nginx/conf/vhost/nestadmin.conf
             
             # 重新加载Nginx配置
             /www/server/nginx/sbin/nginx -s reload
@@ -99,7 +86,6 @@ EOF
             
             echo "✅ 部署完成！"
       
-      # 6. 部署失败通知
       - name: Notify on Failure
         if: failure()
         uses: appleboy/ssh-action@master
