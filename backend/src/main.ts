@@ -52,6 +52,7 @@ async function bootstrap() {
     .addTag('role', '角色管理')
     .addTag('health', '健康检查')
     .addTag('performance', '性能监控')
+    .addTag('chatanywhere', 'ChatAnywhere集成')
     .addBearerAuth(
       {
         type: 'http',
@@ -73,11 +74,20 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
+  const env = process.env.NODE_ENV || 'development';
+  const host = 'localhost';
+  const publicHost = process.env.PUBLIC_HOST || `http://${host}:${port}`;
+  
   await app.listen(port);
   
-  console.log(`🚀 Backend server is running on http://localhost:${port}`);
-  console.log(`📚 Swagger API docs: http://localhost:${port}/api-docs`);
-  console.log(`🏥 Health check: http://localhost:${port}/api/health`);
+  console.log(`\n🚀 Backend server is running`);
+  console.log(`🔧 Environment: ${env.toUpperCase()}`);
+  console.log(`🏠 Local address: http://${host}:${port}`);
+  console.log(`🌐 Public address: ${publicHost}`);
+  console.log(`📚 Swagger API docs: ${publicHost}/api-docs`);
+  console.log(`🏥 Health check: ${publicHost}/api/health`);
+  console.log(`💡 Base API path: ${publicHost}/api`);
+  console.log('');
 }
 
 bootstrap();
