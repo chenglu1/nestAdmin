@@ -10,6 +10,7 @@ const MenuManagement = lazy(() => import('@/pages/MenuManagement/MenuManagement'
 const RoleManagement = lazy(() => import('@/pages/RoleManagement/RoleManagement'));
 const OperationLog = lazy(() => import('@/pages/OperationLog/OperationLog'));
 const PerformanceMonitor = lazy(() => import('@/pages/PerformanceMonitor/PerformanceMonitor'));
+const ChatAnywhere = lazy(() => import('@/pages/ChatAnywhere/ChatAnywhere'));
 
 import type { ReactElement } from 'react';
 
@@ -84,6 +85,15 @@ export const routes: RouteConfig[] = [
         element: <PerformanceMonitor />,
         meta: {
           title: '性能监控',
+          icon: 'BarChartOutlined',
+        },
+      },
+      {
+        path: 'models',
+        element: <ChatAnywhere />,
+        meta: {
+          title: '我的模型',
+          icon: 'DatabaseOutlined',
         },
       },
     ],

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
 import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Breadcrumb, Card, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, MenuOutlined } from '@ant-design/icons';
+import { IconMap } from '@/utils/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getMenuList, createMenu, updateMenu, deleteMenu } from '@/api/menu';
 
@@ -262,12 +263,14 @@ const MenuManagement: React.FC = () => {
             name="icon"
           >
             <Select placeholder="选择图标">
-              <Select.Option value="HomeOutlined" children="HomeOutlined" />
-              <Select.Option value="UserOutlined" children="UserOutlined" />
-              <Select.Option value="TeamOutlined" children="TeamOutlined" />
-              <Select.Option value="MenuOutlined" children="MenuOutlined" />
-              <Select.Option value="SafetyOutlined" children="SafetyOutlined" />
-              <Select.Option value="SettingOutlined" children="SettingOutlined" />
+              {Object.keys(IconMap).map((iconName) => (
+                <Select.Option key={iconName} value={iconName}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ marginRight: '8px' }}>{IconMap[iconName]}</span>
+                    {iconName}
+                  </div>
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
 

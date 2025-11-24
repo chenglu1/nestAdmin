@@ -21,7 +21,7 @@ import { useLayoutStore } from '@/stores/layoutStore';
 
 // 确保正确导入并使用 layoutStore
 import { changePassword } from '@/api/auth';
-import { IconMap } from './constants';
+import { IconMap } from '@/utils/icons';
 import type { ChangePasswordFormData } from './types';
 import './Layout.less';
 
@@ -246,10 +246,7 @@ const ProLayout: React.FC = () => {
       </Header>
 
       {/* 面包屑导航 */}
-      <div 
-        className="breadcrumb-wrapper"
-        style={{ left: collapsed ? 80 : 216 }}
-      >
+      <div className="breadcrumb-wrapper" style={{ left: collapsed ? 80 : 216 }}>
         <Breadcrumb
           items={breadcrumbs.map((item) => ({
             title: (
@@ -323,7 +320,10 @@ const ProLayout: React.FC = () => {
         </Sider>
 
         {/* 内容区域 */}
-        <Content className="pro-content-wrapper-enhanced">
+        <Content 
+          className="pro-content-wrapper-enhanced"
+          style={{ marginLeft: collapsed ? 80 : 216 }}
+        >
           <Outlet />
         </Content>
       </Layout>

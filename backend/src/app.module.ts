@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
+import { HttpModule } from '@nestjs/axios';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { MenuModule } from './modules/menu/menu.module';
@@ -11,6 +12,7 @@ import { LogModule } from './modules/log/log.module';
 import { HealthModule } from './modules/health/health.module';
 import { PerformanceModule } from './modules/performance/performance.module';
 import { CacheModule } from './modules/cache/cache.module';
+import { ChatanywhereModule } from './modules/chatanywhere/chatanywhere.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 import { winstonConfig } from './config/winston.config';
@@ -28,6 +30,9 @@ import { winstonConfig } from './config/winston.config';
     
     // 缓存模块
     CacheModule,
+    
+    // HTTP模块，用于外部API调用
+    HttpModule,
     
     // 数据库连接
     TypeOrmModule.forRoot({
@@ -65,6 +70,7 @@ import { winstonConfig } from './config/winston.config';
     LogModule,
     HealthModule,
     PerformanceModule,
+    ChatanywhereModule,
   ],
   providers: [
     {
