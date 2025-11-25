@@ -10,8 +10,11 @@ import cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // 安全加固 - Helmet 设置安全 HTTP 头
-  app.use(helmet());
+  // 安全加固 - Helmet 设置安全 HTTP 头，禁用某些可能导致问题的安全头
+  app.use(helmet({
+    crossOriginOpenerPolicy: false,
+    contentSecurityPolicy: false,
+  }));
   
   // 启用 gzip 压缩
   app.use(compression());
@@ -75,7 +78,8 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   const env = process.env.NODE_ENV || 'development';
-  const host = env === 'production' ? '0.0.0.0' : 'localhost';
+  // 确保绑定到所有网络接口以允许外部访问
+  const host = '0.0.0.0';
   const publicHost = process.env.PUBLIC_HOST || `http://${host}:${port}`;
   
   await app.listen(port, host);
