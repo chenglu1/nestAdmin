@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'nestAdmin-backend',
-      script: './dist/main.js',
+      script: './dist/src/main.js',
       instances: 'max',
       exec_mode: 'cluster',
       autorestart: true,
