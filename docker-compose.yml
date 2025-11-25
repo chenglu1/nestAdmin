@@ -55,6 +55,9 @@ services:
       - "3001:3001"
     environment:
       NODE_ENV: production
+      PORT: ${PORT}
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      CORS_ORIGIN: ${CORS_ORIGIN}
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USERNAME: ${DB_USERNAME}
@@ -66,6 +69,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-default_redis_password}
+      CHATANYWHERE_API_KEY: ${CHATANYWHERE_API_KEY}
+      CHATANYWHERE_API_BASE_URL: ${CHATANYWHERE_API_BASE_URL}
       TZ: Asia/Shanghai
     depends_on:
       mysql:

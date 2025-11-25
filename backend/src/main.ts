@@ -75,10 +75,10 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   const env = process.env.NODE_ENV || 'development';
-  const host = 'localhost';
+  const host = env === 'production' ? '0.0.0.0' : 'localhost';
   const publicHost = process.env.PUBLIC_HOST || `http://${host}:${port}`;
   
-  await app.listen(port);
+  await app.listen(port, host);
   
   console.log(`\n🚀 Backend server is running`);
   console.log(`🔧 Environment: ${env.toUpperCase()}`);
