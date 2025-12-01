@@ -6,9 +6,9 @@
 [![NestJS](https://img.shields.io/badge/NestJS-11.1-red)](https://nestjs.com/)
 [![React](https://img.shields.io/badge/React-18.3-blue)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-7.2-purple)](https://vitejs.dev/)
-[![Ant Design](https://img.shields.io/badge/Ant%20Design-5.28-blue)](https://ant.design/)
+[![Ant Design](https://img.shields.io/badge/Ant%20Design-6.0-blue)](https://ant.design/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3.4-blue)](https://tailwindcss.com/)
-[![Zustand](https://img.shields.io/badge/Zustand-5.0-green)](https://zustand-demo.pmnd.rs/)
+[![Zustand](https://img.shields.io/badge/Zustand-4.5-green)](https://zustand-demo.pmnd.rs/)
 
 ## ✨ 核心功能
 
@@ -17,11 +17,17 @@
 - 📊 **性能监控**: API响应时间、慢查询追踪、系统健康检查
 - 📝 **操作日志**: 完整的审计日志记录和查询
 - 📖 **API文档**: Swagger自动生成接口文档
-- 🎨 **现代化UI**: Ant Design 5 + 响应式布局
+- 🎨 **现代化UI**: Ant Design 6 + 响应式布局
 - 🔒 **安全加固**: Helmet + 请求限流 + 输入验证 + XSS防护
 - ⚡ **性能优化**: 代码分割 + 路由懒加载 + Gzip 压缩
 
-## 🎯 最新优化 (2025-11-19)
+## 🎯 最新优化 (2025-12-01)
+
+### 🎨 UI框架升级
+- ✅ Ant Design 从 5.28.1 升级到 6.0.0
+- ✅ @ant-design/x 2.0.0 集成
+- ✅ @ant-design/icons 6.1.0 升级
+- ✅ 组件API兼容性修复
 
 ### 🚀 性能提升
 - ✅ 构建速度提升 **22%** (esbuild 替代 terser)
@@ -65,8 +71,8 @@
 ### 前端
 - **框架**: React 18.3.1 + TypeScript
 - **构建**: Vite 7.2.2
-- **UI库**: Ant Design 5.28.1
-- **状态管理**: Zustand 5.0.8
+- **UI库**: Ant Design 6.0.0
+- **状态管理**: Zustand 4.5.0
 - **路由**: React Router 6.28.0
 - **图表**: ECharts 6.0.0
 - **HTTP**: Axios 1.13.2
@@ -408,5 +414,5 @@ MIT
 ---
 
 **Created**: 2025-11-14  
-**Last Updated**: 2025-11-21  
-**Optimized**: ✨ 性能提升 48% | 代码质量显著改善 | 安全性大幅增强 | Token存储安全升级 | TypeScript错误全面修复 | CSS变量兼容性优化
+**Last Updated**: 2025-12-01  
+**Optimized**: ✨ Ant Design 6.0.0 升级 | 性能提升 48% | 代码质量显著改善 | 安全性大幅增强 | Token存储安全升级 | TypeScript错误全面修复 | CSS变量兼容性优化

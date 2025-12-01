@@ -75,7 +75,7 @@ const LogDetailDrawer: React.FC<LogDetailDrawerProps> = ({ visible, log, onClose
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {/* 基本信息 */}
         <div>
-          <Divider orientation="left">
+          <Divider titlePlacement="left">
             <Space>
               <UserOutlined />
               基本信息
@@ -104,7 +104,7 @@ const LogDetailDrawer: React.FC<LogDetailDrawerProps> = ({ visible, log, onClose
 
         {/* 请求信息 */}
         <div>
-          <Divider orientation="left">
+          <Divider titlePlacement="left">
             <Space>
               <CodeOutlined />
               请求信息
@@ -129,7 +129,7 @@ const LogDetailDrawer: React.FC<LogDetailDrawerProps> = ({ visible, log, onClose
 
         {/* 响应信息 */}
         <div>
-          <Divider orientation="left">
+          <Divider titlePlacement="left">
             <Space>
               <CheckCircleOutlined />
               响应信息
@@ -156,7 +156,7 @@ const LogDetailDrawer: React.FC<LogDetailDrawerProps> = ({ visible, log, onClose
 
         {/* 客户端信息 */}
         <div>
-          <Divider orientation="left">
+          <Divider titlePlacement="left">
             <Space>
               <GlobalOutlined />
               客户端信息
