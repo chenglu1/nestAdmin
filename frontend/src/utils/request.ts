@@ -2,9 +2,45 @@ import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import { message } from 'antd';
 import { useAuthStore } from '@/stores/authStore';
 
-// 根据环境使用不同的API地址
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// 聊天API配置
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const MESSAGE_DURATION = 3; // 秒
+
+// 聊天API配置
+const CHAT_API_URL = `${API_BASE_URL}/chatanywhere/chat`;
+
+// 聊天消息类型定义
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+// 聊天请求参数
+export interface ChatRequestParams {
+  messages: ChatMessage[];
+  model?: string;
+  stream?: boolean;
+  temperature?: number;
+  max_tokens?: number;
+}
+
+// 聊天响应数据
+export interface ChatResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: {
+    index: number;
+    delta: {
+      role?: string;
+      content?: string;
+    };
+    logprobs: null;
+    finish_reason: string | null;
+  }[];
+  system_fingerprint: string;
+}
 
 // 响应数据接口
 interface ApiResponse {
@@ -233,5 +269,94 @@ request.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * 发送聊天请求
+ * @param params 聊天请求参数
+ * @param onChunk 流式响应回调函数
+ * @returns Promise<Response> 响应对象
+ */
+export const sendChatRequest = async (
+  params: ChatRequestParams,
+  onChunk?: (chunk: ChatResponse) => void
+): Promise<Response> => {
+  // 从authStore中获取token
+  const { token } = useAuthStore.getState();
+  
+  // 确保stream参数为true
+  const requestParams = {
+    ...params,
+    stream: true
+  };
+  
+  const response = await fetch(CHAT_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      model: requestParams.model || 'gpt-3.5-turbo',
+      messages: requestParams.messages,
+      stream: requestParams.stream,
+      temperature: requestParams.temperature || 0.7,
+      max_tokens: requestParams.max_tokens || 1000,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Chat API request failed with status: ${response.status}`);
+  }
+
+  // 如果是流式响应且提供了回调函数，则处理流式数据
+  if (params.stream && onChunk && response.body) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      // 解码当前获取的数据块
+      const chunk = decoder.decode(value, { stream: true });
+      // 将新数据添加到缓冲区
+      buffer += chunk;
+      
+      // 处理缓冲区中的完整SSE事件
+      let lineEndIndex;
+      while ((lineEndIndex = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.substring(0, lineEndIndex);
+        buffer = buffer.substring(lineEndIndex + 1);
+        
+        const trimmedLine = line.trim();
+        if (!trimmedLine) {
+          continue;
+        }
+
+        if (trimmedLine === 'data: [DONE]') {
+          continue;
+        }
+
+        if (trimmedLine.startsWith('data: ')) {
+          try {
+            const jsonStr = trimmedLine.slice(6);
+            const data = JSON.parse(jsonStr) as ChatResponse;
+            // 直接调用回调函数，确保实时处理
+            onChunk(data);
+          } catch (error) {
+            console.error('Error parsing SSE data:', error);
+            console.error('Failed line:', trimmedLine);
+          }
+        }
+      }
+    }
+  }
+
+  return response;
+};
 
 export default request;

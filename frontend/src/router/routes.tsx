@@ -11,6 +11,7 @@ const RoleManagement = lazy(() => import('@/pages/RoleManagement/RoleManagement'
 const OperationLog = lazy(() => import('@/pages/OperationLog/OperationLog'));
 const PerformanceMonitor = lazy(() => import('@/pages/PerformanceMonitor/PerformanceMonitor'));
 const ChatAnywhere = lazy(() => import('@/pages/ChatAnywhere/ChatAnywhere'));
+const ChatBox = lazy(() => import('@/pages/ChatBox/ChatBox'));
 
 import type { ReactElement } from 'react';
 
@@ -35,6 +36,14 @@ export const routes: RouteConfig[] = [
     meta: {
       title: '登录',
       requiresAuth: false,
+    },
+  },
+  {
+    path: '/chat',
+    element: <ChatBox />,
+    meta: {
+      title: '百宝箱聊天',
+      requiresAuth: true,
     },
   },
   {

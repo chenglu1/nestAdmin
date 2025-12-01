@@ -3,39 +3,31 @@
  * @Description: Pro 风格的主布局组件 - 支持侧边栏展开收起、用户菜单在底部、面包屑、搜索、通知等功能
  */
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { AxiosError } from 'axios';
-import { Layout, Button, Space, message, Menu, Dropdown, Avatar, Divider, Spin, Breadcrumb, Badge, Modal, Form, Input } from 'antd';
+import { Layout, Button, Space, message, Menu, Dropdown, Badge, Spin, Breadcrumb } from 'antd';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import {
-  UserOutlined,
-  LogoutOutlined,
-  SettingOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BugOutlined,
   BellOutlined,
-  CopyOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/authStore';
 import { useLayoutStore } from '@/stores/layoutStore';
 
 // 确保正确导入并使用 layoutStore
-import { changePassword } from '@/api/auth';
 import { IconMap } from '@/utils/icons';
-import type { ChangePasswordFormData } from './types';
+import UserMenu from '@/components/UserMenu/UserMenu';
 import './Layout.less';
 
 const { Header, Content, Sider } = Layout;
 
 const ProLayout: React.FC = () => {
-  const { user, menus, isAuthenticated, fetchMenus, logout, isLoading } = useAuthStore();
+  const { menus, isAuthenticated, fetchMenus, isLoading } = useAuthStore();
   // 正确访问 collapsed 状态和 toggleCollapsed 方法
   const layoutStore = useLayoutStore();
   const collapsed = layoutStore?.collapsed || false;
   const toggleCollapsed = layoutStore?.toggleCollapsed || (() => {});
-  const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [notifications, setNotifications] = useState(3);
-  const [form] = Form.useForm<ChangePasswordFormData>();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -62,73 +54,9 @@ const ProLayout: React.FC = () => {
     return items;
   }, [location.pathname, menus]);
 
-  const handleLogoutWithConfirm = useCallback(() => {
-    Modal.confirm({
-      title: '退出登录',
-      content: '确定要退出登录吗？',
-      okText: '确定',
-      cancelText: '取消',
-      onOk: logout,
-    });
-  }, [logout]);
-
-  const handleChangePassword = useCallback(async (values: ChangePasswordFormData) => {
-    try {
-      await changePassword({
-        oldPassword: values.oldPassword,
-        newPassword: values.newPassword,
-      });
-      message.success('密码修改成功！');
-      setChangePasswordVisible(false);
-      form.resetFields();
-    } catch (error: unknown) {
-      const axiosError = error as AxiosError<{ message?: string }>;
-      const errorMessage = axiosError?.response?.data?.message || '密码修改失败';
-      message.error(errorMessage);
-    }
-  }, [form]);
-
   const handleMenuClick = useCallback((key: string) => {
     navigate(key);
   }, [navigate]);
-
-  // 用户菜单项 - 使用 useMemo 优化
-  const userMenuItems = useMemo(() => [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人资料',
-      onClick: () => {
-        message.info('个人资料功能开发中');
-      },
-    },
-    {
-      key: 'password',
-      icon: <CopyOutlined />,
-      label: '修改密码',
-      onClick: () => {
-        setChangePasswordVisible(true);
-      },
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: '账户设置',
-      onClick: () => {
-        message.info('账户设置功能开发中');
-      },
-    },
-    {
-      type: 'divider' as const,
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-      danger: true,
-      onClick: handleLogoutWithConfirm,
-    },
-  ], [handleLogoutWithConfirm]);
 
   // 通知菜单项 - 使用 useMemo 优化
   const notificationItems = useMemo(() => [
@@ -263,7 +191,7 @@ const ProLayout: React.FC = () => {
 
       {/* 主体布局 */}
       <Layout className="pro-site-layout-enhanced">
-        {/* 侧边栏 */}
+        {/* 侧边栏 - 只显示用户信息 */}
         <Sider
           trigger={null}
           collapsible
@@ -272,49 +200,22 @@ const ProLayout: React.FC = () => {
           className="pro-sider-enhanced"
         >
           <div className="sider-content">
-            {/* 菜单区域 */}
+            {/* 菜单区域 - 只显示聊天菜单或隐藏 */}
             <div className="sider-menu-wrapper">
-              <Menu
-                mode="inline"
-                selectedKeys={[location.pathname]}
-                theme="dark"
-                items={menuItems}
-              />
+              {menuItems.length > 0 && (
+                <Menu
+                  mode="inline"
+                  selectedKeys={[location.pathname]}
+                  theme="dark"
+                  items={menuItems}
+                />
+              )}
             </div>
 
             {/* 用户信息区域 - 底部固定 */}
             <div className="sider-user-footer">
-              <Divider style={{ margin: '8px 0' }} />
-              <div className="user-info-card">
-                <div className="user-avatar-wrapper">
-                  <Avatar
-                    size={40}
-                    icon={<UserOutlined />}
-                    style={{ backgroundColor: '#87d068' }}
-                  />
-                  <Badge status="success" />
-                </div>
-                {!collapsed ? (
-                  <>
-                    <div className="user-info-text">
-                      <div className="user-name">{user?.nickname || user?.username}</div>
-                      <div className="user-role">{user?.username === 'admin' ? '管理员' : '用户'}</div>
-                    </div>
-                    <Dropdown
-                      menu={{ items: userMenuItems }}
-                      placement="topRight"
-                      trigger={['click']}
-                    >
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<SettingOutlined />}
-                        className="user-menu-btn"
-                      />
-                    </Dropdown>
-                  </>
-                ) : null}
-              </div>
+              <div style={{ margin: '8px 0', borderTop: '1px solid #1f1f1f' }} />
+              <UserMenu collapsed={collapsed} />
             </div>
           </div>
         </Sider>
@@ -327,58 +228,6 @@ const ProLayout: React.FC = () => {
           <Outlet />
         </Content>
       </Layout>
-
-      {/* 修改密码Modal */}
-      <Modal
-        title="修改密码"
-        open={changePasswordVisible}
-        onOk={() => form.submit()}
-        onCancel={() => setChangePasswordVisible(false)}
-        okText="确定"
-        cancelText="取消"
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleChangePassword}
-        >
-          <Form.Item
-            label="当前密码"
-            name="oldPassword"
-            rules={[{ required: true, message: '请输入当前密码' }]}
-          >
-            <Input.Password placeholder="请输入当前密码" />
-          </Form.Item>
-          <Form.Item
-            label="新密码"
-            name="newPassword"
-            rules={[
-              { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码长度不少于6位' },
-            ]}
-          >
-            <Input.Password placeholder="请输入新密码" />
-          </Form.Item>
-          <Form.Item
-            label="确认密码"
-            name="confirmPassword"
-            dependencies={["newPassword"]}
-            rules={[
-              { required: true, message: '请确认密码' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('两次输入密码不一致！'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password placeholder="请再次输入新密码" />
-          </Form.Item>
-        </Form>
-      </Modal>
     </Layout>
   );
 };

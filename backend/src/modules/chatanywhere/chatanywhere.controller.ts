@@ -1,7 +1,9 @@
-import { Controller, Get, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ChatanywhereService } from './chatanywhere.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ChatRequest } from './dto/chat.dto';
+import { Response } from 'express';
 
 @ApiTags('chatanywhere')
 @Controller('chatanywhere')
@@ -26,5 +28,16 @@ export class ChatanywhereController {
         total: response.data.length
       }
     };
+  }
+
+  @ApiOperation({ summary: '获取聊天响应' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({ status: 200, description: '成功获取聊天响应' })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 500, description: '服务器错误' })
+  @UseGuards(JwtAuthGuard)
+  @Post('chat')
+  async chat(@Body() request: ChatRequest, @Res() res: Response) {
+    return this.chatanywhereService.chat(request, res);
   }
 }

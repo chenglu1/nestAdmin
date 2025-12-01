@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Spin, Alert, Button, Breadcrumb } from 'antd';
-import { ReloadOutlined, HomeOutlined } from '@ant-design/icons';
+import { ReloadOutlined, HomeOutlined, MessageOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getModels } from '@/api/chatanywhere';
 import type { Model } from '@/api/chatanywhere';
@@ -63,6 +63,22 @@ const ChatAnywhere: React.FC = () => {
         <span>
           {record.permission && record.permission.length > 0 ? '已配置' : '默认权限'}
         </span>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_, record) => (
+        <Button
+          type="primary"
+          icon={<MessageOutlined />}
+          size="small"
+          onClick={() => {
+            window.open(`/chat?model=${record.id}`, '_blank');
+          }}
+        >
+          对话
+        </Button>
       ),
     },
   ];
