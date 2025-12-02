@@ -1,8 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Bubble, Prompts, Welcome } from '@ant-design/x';
 import XMarkdown from '@ant-design/x-markdown';
-import { Flex, Space, Button } from 'antd';
-import { ShareAltOutlined, EllipsisOutlined } from '@ant-design/icons';
+import { Flex, Space, Button, message } from 'antd';
+import { ShareAltOutlined, EllipsisOutlined, EditOutlined, CopyOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useChatBoxStyles } from '../styles';
 import type { LocaleText } from '../config';
 import { getHotTopics, getDesignGuide } from '../config';
@@ -39,6 +39,7 @@ const ChatList: React.FC<ChatListProps> = ({
 }) => {
   const { styles } = useChatBoxStyles();
   const chatListRef = useRef<HTMLDivElement>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | number | null>(null);
 
   // 自动滚动到最新消息
   useEffect(() => {
@@ -46,6 +47,28 @@ const ChatList: React.FC<ChatListProps> = ({
       chatListRef.current.scrollTop = chatListRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // 处理消息编辑
+  const handleEditConfirm = (_content: string, _messageId: string | number) => {
+    message.success('消息已更新');
+    setEditingMessageId(null);
+    // 这里可以添加更新消息的逻辑
+  };
+
+  // 处理消息复制
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content).then(() => {
+      message.success('已复制到剪贴板');
+    }).catch(() => {
+      message.error('复制失败');
+    });
+  };
+
+  // 处理消息重试
+  const handleRetry = (_messageId: string | number) => {
+    message.info('正在重试...');
+    // 这里可以添加重试逻辑
+  };
 
   const role = {
     assistant: {
@@ -69,8 +92,37 @@ const ChatList: React.FC<ChatListProps> = ({
       },
       typing: {
         effect: 'typing' as const,
-        interval: 50,
+        // 步进单位设置为随机区间，让打字效果更自然
+        step: [1, 5] as [number, number],
+        // 调整间隔为更符合人类打字速度的范围
+        interval: 30,
+        // 保留公共前缀，优化流式传输效果
         keepPrefix: true,
+      },
+      // 添加AI消息的footer，包含复制和重试按钮
+      footer: (content: ChatContent, info: any) => {
+        return (
+          <Space size="small" style={{ marginTop: 8 }}>
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopy(content.text || '')}
+            >
+              复制
+            </Button>
+            {(info.status === 'error' || info.status === 'abort') && (
+              <Button
+                type="text"
+                size="small"
+                icon={<ReloadOutlined />}
+                onClick={() => handleRetry(info.key)}
+              >
+                重试
+              </Button>
+            )}
+          </Space>
+        );
       },
       variant: 'filled' as const,
       shape: 'round' as const,
@@ -78,6 +130,29 @@ const ChatList: React.FC<ChatListProps> = ({
     user: {
       placement: 'end' as const,
       avatar: <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#52c41a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 12 }}>U</div>,
+      // 添加用户消息的footer，包含编辑按钮
+      footer: (content: ChatContent, info: any) => {
+        return (
+          <Space size="small" style={{ marginTop: 8 }}>
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => setEditingMessageId(info.key)}
+            >
+              编辑
+            </Button>
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopy(content.text || '')}
+            >
+              复制
+            </Button>
+          </Space>
+        );
+      },
       variant: 'filled' as const,
       shape: 'round' as const,
     },
@@ -89,11 +164,18 @@ const ChatList: React.FC<ChatListProps> = ({
         {messages?.length ? (
           /* 🌟 消息列表 */
           <Bubble.List
-            items={messages?.slice().reverse().map((i) => ({
+            items={messages?.map((i) => ({
               ...i.message,
               status: i.status,
               loading: i.status === 'loading',
               key: i.id,
+              // 为用户消息添加编辑功能
+              editable: i.message.role === 'user' ? {
+                editing: editingMessageId === i.id,
+              } : undefined,
+              // 编辑确认和取消回调应该是BubbleItem的直接属性，而不是editable对象的属性
+              onEditConfirm: (content: string) => handleEditConfirm(content, i.id),
+              onEditCancel: () => setEditingMessageId(null),
             }))}
             styles={{
               bubble: {

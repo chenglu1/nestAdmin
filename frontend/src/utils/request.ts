@@ -317,12 +317,16 @@ export const sendChatRequest = async (
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-
+      
       // 解码当前获取的数据块
-      const chunk = decoder.decode(value, { stream: true });
+      let chunk = '';
+      if (value) {
+        chunk = decoder.decode(value, { stream: !done });
+      } else if (done) {
+        // 流结束时，获取可能剩余的解码数据
+        chunk = decoder.decode();
+      }
+      
       // 将新数据添加到缓冲区
       buffer += chunk;
       
@@ -350,8 +354,27 @@ export const sendChatRequest = async (
           } catch (error) {
             console.error('Error parsing SSE data:', error);
             console.error('Failed line:', trimmedLine);
+            // 即使解析失败，也要继续处理后续数据
           }
         }
+      }
+      
+      if (done) {
+        // 处理流结束时缓冲区中可能剩余的完整事件
+        if (buffer.trim()) {
+          // 如果缓冲区中还有数据，尝试作为完整事件处理
+          try {
+            if (buffer.startsWith('data: ')) {
+              const jsonStr = buffer.slice(6);
+              const data = JSON.parse(jsonStr) as ChatResponse;
+              onChunk(data);
+            }
+          } catch (error) {
+            console.error('Error parsing final SSE data:', error);
+            console.error('Final buffer:', buffer);
+          }
+        }
+        break;
       }
     }
   }

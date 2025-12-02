@@ -118,10 +118,8 @@ export class ChatanywhereService {
           // 确保数据立即发送，不被缓冲
           if (res.flush) {
             res.flush();
-          } else {
-            // 如果没有flush方法，使用res.end()的替代方案
-            res.write('\n');
           }
+          // 注意：不要添加额外的换行符，这会破坏SSE格式
         });
 
         // 监听流结束

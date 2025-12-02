@@ -71,12 +71,13 @@ export class MockRequest<
           stream: true // 启用流式输出
         };
 
-        const accumulatedText = '';
+        let accumulatedText = '';
 
         // 使用sendChatRequest函数发送聊天请求
         await sendChatRequest(params, (chunk: ChatResponse) => {
           const content = chunk.choices[0]?.delta?.content || '';
           if (content) {
+            accumulatedText += content;
             // 直接调用onUpdate，确保实时更新
             callbacks?.onUpdate?.({ text: content } as Output, new Headers());
           }
