@@ -1,6 +1,11 @@
 # Dependencies
 node_modules/
 package-lock.json
+yarn.lock
+
+# pnpm
+.pnpm-debug.log*
+.pnpm-store/
 
 # Environment variables
 .env

@@ -10,7 +10,8 @@
     "lint": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,less}\"",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist node_modules .vite"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
@@ -45,6 +46,7 @@
     "less": "^4.4.2",
     "postcss": "^8.5.6",
     "prettier": "^3.4.1",
+    "rimraf": "^6.1.2",
     "tailwindcss": "^3.4.1",
     "terser": "^5.44.1",
     "typescript": "~5.9.3",

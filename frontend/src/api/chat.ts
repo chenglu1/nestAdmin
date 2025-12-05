@@ -29,6 +29,7 @@ export class MockRequest<
   _isTimeout = false;
   _isStreamTimeout = false;
   _isRequesting = false;
+  _abortController: AbortController | null = null;
 
   get asyncHandler(): Promise<void> {
     return Promise.resolve();
@@ -52,6 +53,8 @@ export class MockRequest<
 
   run(params?: Input | undefined): void {
     this._isRequesting = true;
+    // 创建新的 AbortController
+    this._abortController = new AbortController();
     const { callbacks } = this.options;
     const userMessage = params?.message?.content || '';
     // 从params中获取模型参数，如果没有则使用默认值
@@ -60,7 +63,7 @@ export class MockRequest<
     // 使用指定的 API 接口获取 AI 回复
     const fetchAIResponse = async () => {
       try {
-        const params: ChatRequestParams = {
+        const requestParams: ChatRequestParams = {
           model,
           messages: [
             {
@@ -73,21 +76,31 @@ export class MockRequest<
 
         let accumulatedText = '';
 
-        // 使用sendChatRequest函数发送聊天请求
-        await sendChatRequest(params, (chunk: ChatResponse) => {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            accumulatedText += content;
-            // 直接调用onUpdate，确保实时更新
-            callbacks?.onUpdate?.({ text: content } as Output, new Headers());
-          }
-        });
+        // 使用sendChatRequest函数发送聊天请求，传入signal
+        await sendChatRequest(
+          requestParams,
+          (chunk: ChatResponse) => {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+              accumulatedText += content;
+              // 直接调用onUpdate，确保实时更新
+              callbacks?.onUpdate?.({ text: content } as Output, new Headers());
+            }
+          },
+          this._abortController?.signal
+        );
 
         callbacks?.onSuccess?.([{ text: accumulatedText }] as Output[], new Headers());
         this._isRequesting = false;
-      } catch (error) {
-        console.error('Error fetching AI response:', error);
-        callbacks?.onError?.(error as Error);
+      } catch (error: any) {
+        // 检查是否是用户主动中止
+        if (error.name === 'AbortError') {
+          console.log('Request aborted by user');
+          callbacks?.onError?.(new Error('Request aborted'));
+        } else {
+          console.error('Error fetching AI response:', error);
+          callbacks?.onError?.(error as Error);
+        }
         this._isRequesting = false;
       }
     };
@@ -96,6 +109,10 @@ export class MockRequest<
   }
 
   abort(): void {
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
+    }
     this._isRequesting = false;
   }
 }

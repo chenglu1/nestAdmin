@@ -278,7 +278,8 @@ request.interceptors.response.use(
  */
 export const sendChatRequest = async (
   params: ChatRequestParams,
-  onChunk?: (chunk: ChatResponse) => void
+  onChunk?: (chunk: ChatResponse) => void,
+  signal?: AbortSignal
 ): Promise<Response> => {
   // 从authStore中获取token
   const { token } = useAuthStore.getState();
@@ -303,6 +304,7 @@ export const sendChatRequest = async (
       temperature: requestParams.temperature || 0.7,
       max_tokens: requestParams.max_tokens || 1000,
     }),
+    signal, // 添加 AbortSignal 支持
   });
 
   if (!response.ok) {

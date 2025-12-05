@@ -3,17 +3,20 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# 安装pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # 复制 package 文件
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # 安装依赖
-RUN npm ci --only=production
+RUN pnpm install --frozen-lockfile --prod
 
 # 复制源代码
 COPY . .
 
 # 构建应用
-RUN npm run build
+RUN pnpm build
 
 # 生产镜像
 FROM node:20-alpine

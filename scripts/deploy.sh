@@ -51,7 +51,7 @@ update_backend_deps() {
     log "📦 更新后端依赖..."
     cd "$BACKEND_DIR"
     
-    npm install --production || error "后端依赖安装失败"
+    pnpm install --prod || error "后端依赖安装失败"
     
     log "✅ 后端依赖更新成功"
 }
@@ -61,7 +61,7 @@ build_backend() {
     log "🔨 编译后端代码..."
     cd "$BACKEND_DIR"
     
-    npm run build || error "后端编译失败"
+    pnpm build || error "后端编译失败"
     
     log "✅ 后端编译成功"
 }
@@ -71,7 +71,7 @@ update_frontend_deps() {
     log "📦 更新前端依赖..."
     cd "$FRONTEND_DIR"
     
-    npm install --production || error "前端依赖安装失败"
+    pnpm install --prod || error "前端依赖安装失败"
     
     log "✅ 前端依赖更新成功"
 }
@@ -81,7 +81,7 @@ build_frontend() {
     log "🔨 编译前端代码..."
     cd "$FRONTEND_DIR"
     
-    npm run build || error "前端编译失败"
+    pnpm build || error "前端编译失败"
     
     log "✅ 前端编译成功"
 }
