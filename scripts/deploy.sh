@@ -21,6 +21,11 @@ LOG_FILE="${PROJECT_ROOT}/logs/deploy.log"
 BRANCH="main"  # 监听的分支
 DEPLOY_MODE="${DEPLOY_MODE:-pm2}"  # 部署模式: pm2 或 docker
 
+# 优化：配置 pnpm 全局缓存目录（加速依赖安装）
+export PNPM_HOME="${PNPM_HOME:-/root/.local/share/pnpm}"
+export PNPM_STORE_DIR="${PNPM_STORE_DIR:-/root/.pnpm-store}"
+mkdir -p "$PNPM_STORE_DIR"
+
 # 创建日志目录
 mkdir -p "$(dirname "$LOG_FILE")"
 
