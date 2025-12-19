@@ -111,6 +111,9 @@ update_backend_deps() {
         export PATH="$PATH:$(npm config get prefix)/bin"
     fi
     
+    # 设置 CI 环境变量（避免 pnpm 在非交互式环境中报错）
+    export CI=true
+    
     pnpm install --prod || error "后端依赖安装失败"
     
     log "✅ 后端依赖更新成功"
@@ -120,6 +123,9 @@ update_backend_deps() {
 build_backend() {
     log "🔨 编译后端代码..."
     cd "$BACKEND_DIR"
+    
+    # 设置 CI 环境变量
+    export CI=true
     
     pnpm build || error "后端编译失败"
     
@@ -139,6 +145,9 @@ update_frontend_deps() {
         export PATH="$PATH:$(npm config get prefix)/bin"
     fi
     
+    # 设置 CI 环境变量（避免 pnpm 在非交互式环境中报错）
+    export CI=true
+    
     pnpm install --prod || error "前端依赖安装失败"
     
     log "✅ 前端依赖更新成功"
@@ -148,6 +157,9 @@ update_frontend_deps() {
 build_frontend() {
     log "🔨 编译前端代码..."
     cd "$FRONTEND_DIR"
+    
+    # 设置 CI 环境变量
+    export CI=true
     
     pnpm build || error "前端编译失败"
     
@@ -272,6 +284,9 @@ main() {
     log "🚀 NestAdmin 自动部署流程开始"
     log "部署模式: $DEPLOY_MODE"
     log "=========================================="
+    
+    # 设置 CI 环境变量（避免 pnpm 在非交互式环境中报错）
+    export CI=true
     
     # 检查项目目录是否存在
     [ -d "$PROJECT_ROOT" ] || error "项目目录不存在: $PROJECT_ROOT"
