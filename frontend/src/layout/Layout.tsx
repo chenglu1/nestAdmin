@@ -126,7 +126,7 @@ const ProLayout: React.FC = () => {
             onClick={toggleCollapsed}
             className="layout-trigger"
           />
-          <h1 className="logo-title">🎯 管理系统</h1>
+          <h1 className="logo-title">✨ 管理系统</h1>
         </div>
 {/* 
         <div className="header-center">

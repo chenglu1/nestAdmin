@@ -1,0 +1,443 @@
+@import './styles/variables.less';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: @font-family;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: @body-background;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+
+  &:hover {
+    background: #a8a8a8;
+  }
+}
+
+/* 平滑过渡动画 */
+* {
+  transition: background-color @animation-duration-base ease, 
+              color @animation-duration-base ease, 
+              border-color @animation-duration-base ease;
+}
+
+/* 卡片悬停效果 */
+.ant-card {
+  transition: all @animation-duration-slow @ease-in-out;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-2px);
+  }
+}
+
+.ant-card-head {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: @padding-md @padding-lg;
+
+  &-title {
+    font-weight: @font-weight-bold;
+    font-size: @font-size-lg;
+  }
+}
+
+.ant-card-body {
+  padding: @padding-lg;
+}
+
+/* 按钮优化 */
+.ant-btn {
+  transition: all @animation-duration-base ease;
+
+  &-primary {
+    box-shadow: 0 2px 4px rgba(22, 119, 255, 0.2);
+
+    &:hover {
+      box-shadow: 0 4px 8px rgba(22, 119, 255, 0.3);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+/* 表格优化 */
+.ant-table {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid @border-color-split;
+
+  &-thead > tr > th {
+    background: linear-gradient(to bottom, #fafafa 0%, #f5f5f5 100%);
+    font-weight: @font-weight-bold;
+    color: @heading-color;
+    border-bottom: 2px solid #e8e8e8;
+    padding: @padding-md;
+  }
+
+  &-tbody > tr {
+    transition: all @animation-duration-base ease;
+
+    &:hover > td {
+      background: linear-gradient(to right, #f0f7ff 0%, #f5f7fa 100%) !important;
+      transform: scale(1.01);
+    }
+
+    > td {
+      padding: @padding-md;
+      border-bottom: 1px solid @border-color-split;
+    }
+  }
+}
+
+/* 输入框聚焦效果 */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector {
+  &:focus,
+  &.ant-input-affix-wrapper-focused,
+  &.ant-select-focused {
+    border-color: @primary-color !important;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1) !important;
+  }
+}
+
+.ant-select-selector {
+  border-radius: 8px !important;
+}
+
+.ant-input-affix-wrapper {
+  border-radius: 8px;
+}
+
+/* Modal优化 */
+.ant-modal {
+  &-content {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  &-header {
+    border-bottom: 1px solid @border-color-split;
+    padding: 20px @padding-lg;
+  }
+
+  &-title {
+    font-weight: @font-weight-bold;
+    font-size: 18px;
+  }
+
+  &-body {
+    padding: @padding-lg;
+  }
+}
+
+/* Form优化 */
+.ant-form {
+  &-item {
+    margin-bottom: 20px;
+
+    &-label > label {
+      font-weight: 500;
+      color: @heading-color;
+    }
+  }
+}
+
+/* Tag优化 */
+.ant-tag {
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-weight: 500;
+  border: none;
+}
+
+/* Switch优化 */
+.ant-switch {
+  background-color: #bfbfbf;
+
+  &-checked {
+    background-color: @primary-color;
+  }
+}
+
+/* Pagination优化 - 现代化美观样式 */
+.ant-pagination {
+  margin-top: @margin-lg;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: @padding-md 0;
+
+  &-item {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    transition: all @animation-duration-slow @ease-in-out;
+    min-width: 40px;
+    height: 40px;
+    line-height: 38px;
+    font-weight: 500;
+    background: #fff;
+    margin: 0 4px;
+
+    &:hover {
+      border-color: @primary-color;
+      color: @primary-color;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+    }
+
+    &-active {
+      background: linear-gradient(135deg, #1677ff 0%, #722ed1 100%);
+      border-color: transparent;
+      box-shadow: 0 4px 16px rgba(22, 119, 255, 0.4);
+      transform: scale(1.05);
+
+      &:hover {
+        transform: scale(1.08) translateY(-2px);
+        box-shadow: 0 6px 20px rgba(22, 119, 255, 0.5);
+      }
+
+      a {
+        color: #fff !important;
+        font-weight: @font-weight-bold;
+      }
+    }
+  }
+
+  &-prev,
+  &-next {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    min-width: 40px;
+    height: 40px;
+    transition: all @animation-duration-slow @ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      border-color: @primary-color;
+      color: @primary-color;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+    }
+
+    &.ant-pagination-disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      background: #f5f5f5;
+
+      &:hover {
+        transform: none;
+        box-shadow: none;
+        border-color: #e5e7eb;
+        color: rgba(0, 0, 0, 0.25);
+      }
+    }
+  }
+
+  &-jump-prev,
+  &-jump-next {
+    border-radius: 8px;
+    transition: all @animation-duration-slow ease;
+    min-width: 40px;
+    height: 40px;
+
+    &:hover {
+      transform: translateY(-2px);
+      color: @primary-color;
+    }
+  }
+
+  &-options {
+    margin-left: @margin-md;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    &-size-changer {
+      margin-right: 0;
+
+      .ant-select {
+        min-width: 100px;
+
+        &-selector {
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          transition: all @animation-duration-slow ease;
+          height: 40px;
+          padding: 4px 11px;
+
+          &:hover {
+            border-color: @primary-color;
+          }
+        }
+
+        &-focused .ant-select-selector {
+          border-color: @primary-color;
+          box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+        }
+      }
+    }
+
+    &-quick-jumper {
+      margin-left: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      input {
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        transition: all @animation-duration-slow ease;
+        height: 40px;
+        padding: 4px 11px;
+        width: 60px;
+        text-align: center;
+
+        &:hover {
+          border-color: @primary-color;
+        }
+
+        &:focus {
+          border-color: @primary-color;
+          box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+          outline: none;
+        }
+      }
+    }
+  }
+
+  &-total-text {
+    color: #666;
+    font-weight: 500;
+    margin-right: @margin-md;
+    font-size: @font-size-base;
+  }
+}
+
+/* Badge优化 */
+.ant-badge-count {
+  box-shadow: 0 0 0 1px #fff;
+}
+
+/* Drawer优化 */
+.ant-drawer {
+  &-content {
+    border-radius: 12px 0 0 12px;
+  }
+
+  &-header {
+    border-bottom: 1px solid @border-color-split;
+    padding: 20px @padding-lg;
+  }
+
+  &-title {
+    font-weight: @font-weight-bold;
+    font-size: 18px;
+  }
+
+  &-body {
+    padding: @padding-lg;
+  }
+}
+
+/* 加载动画优化 */
+.ant-spin-nested-loading > div > .ant-spin {
+  max-height: none;
+}
+
+.ant-spin-dot-item {
+  background-color: @primary-color;
+}
+
+/* 消息提示优化 */
+.ant-message {
+  top: 80px;
+
+  &-notice-content {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Tooltip优化 */
+.ant-tooltip-inner {
+  border-radius: 6px;
+  font-size: @font-size-sm;
+}
+
+/* Popconfirm优化 */
+.ant-popover-inner-content {
+  padding: @padding-sm @padding-md;
+}
+
+/* 响应式优化 */
+@media (max-width: @screen-md) {
+  .ant-card-body {
+    padding: @padding-md;
+  }
+
+  .ant-table {
+    font-size: @font-size-sm;
+
+    &-thead > tr > th,
+    &-tbody > tr > td {
+      padding: @padding-xs;
+    }
+  }
+
+  .ant-pagination {
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+
+    &-total-text {
+      margin-right: 0;
+      margin-bottom: 8px;
+    }
+
+    &-options {
+      margin-left: 0;
+      flex-direction: column;
+      width: 100%;
+      align-items: stretch;
+
+      &-size-changer {
+        width: 100%;
+      }
+
+      &-quick-jumper {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+}
+

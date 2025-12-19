@@ -240,16 +240,19 @@ const RoleManagement: React.FC = () => {
         ]}
       />
 
-      <Card bordered={false} className="shadow-sm rounded-lg border border-gray-100">
+      <Card bordered={false} className="shadow-lg border-0 rounded-xl" style={{ borderRadius: '12px' }}>
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-            <span className="w-1 h-5 bg-blue-500 rounded-sm mr-3"></span>
-            角色管理
+          <h2 className="text-lg font-bold text-gray-800 flex items-center">
+            <span className="w-1 h-5 bg-gradient-to-b from-purple-500 to-purple-600 rounded-full mr-3"></span>
+            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              角色管理
+            </span>
           </h2>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleAdd}
+            className="shadow-md hover:shadow-lg transition-all"
           >
             新增角色
           </Button>

@@ -84,32 +84,36 @@ const ChatAnywhere: React.FC = () => {
   ];
 
   return (
-    <div className="p-6">
+    <div>
       <Breadcrumb
-        className="mb-4"
+        className="mb-6"
         items={[
           {
             href: '/home',
             title: <><HomeOutlined className="mr-1" /><span>首页</span></>,
           },
           {
-            title: <span>ChatAnywhere</span>,
+            title: <><MessageOutlined className="mr-1" /><span>我的模型</span></>,
           },
         ]}
       />
+
       <Card
         bordered={false}
-        className="shadow-sm mb-4"
+        className="shadow-lg border-0 rounded-xl"
+        style={{ borderRadius: '12px' }}
       >
-        <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-800 m-0 flex items-center">
-            <span className="inline-block w-1 h-5 bg-blue-500 mr-3 rounded"></span>
-            我的模型
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-800 m-0 flex items-center">
+            <span className="inline-block w-1 h-5 bg-gradient-to-b from-cyan-500 to-cyan-600 rounded-full mr-3"></span>
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+              我的模型
+            </span>
           </h2>
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             {lastUpdated && (
-              <span className="text-sm text-gray-600 mr-4">
-                最后更新: {lastUpdated}
+              <span className="text-sm text-gray-600 font-medium">
+                最后更新: <span className="text-blue-600">{lastUpdated}</span>
               </span>
             )}
             <Button 
@@ -117,46 +121,57 @@ const ChatAnywhere: React.FC = () => {
               icon={<ReloadOutlined />} 
               onClick={fetchModels}
               loading={loading}
+              className="shadow-md hover:shadow-lg transition-all"
             >
               刷新
             </Button>
           </div>
         </div>
-      </Card>
-      
-      <Card className="bg-white">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Spin size="large" />
-            <div className="mt-4 text-center text-gray-500">
-              正在获取模型数据...
+        
+        <div className="mt-4">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Spin size="large" />
+              <div className="mt-4 text-center text-gray-500">
+                正在获取模型数据...
+              </div>
             </div>
-          </div>
-        ) : error ? (
-          <Alert 
-            type="error" 
-            message={error} 
-            className="my-4 mx-4" 
-            showIcon
-          />
-        ) : (
-          <Table
-            columns={columns}
-            dataSource={models}
-            rowKey="id"
-            pagination={{
-              showSizeChanger: false,
-              showTotal: (total) => `共 ${total} 条`,
-            }}
-            locale={{
-              emptyText: (
-                <div className="text-center py-4 text-gray-500">
-                  暂无可用模型
-                </div>
-              ),
-            }}
-          />
-        )}
+          ) : error ? (
+            <Alert 
+              type="error" 
+              message={error} 
+              className="my-4" 
+              showIcon
+              closable
+            />
+          ) : (
+            <Table
+              columns={columns}
+              dataSource={models}
+              rowKey="id"
+              className="bg-white rounded-lg overflow-hidden"
+              pagination={{
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => (
+                  <span className="text-gray-600 font-medium">
+                    共 <span className="text-blue-600 font-semibold">{total}</span> 条记录，显示第 {range[0]}-{range[1]} 条
+                  </span>
+                ),
+                pageSizeOptions: ['10', '20', '50', '100'],
+              }}
+              locale={{
+                emptyText: (
+                  <div className="text-center py-12 text-gray-500">
+                    <MessageOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
+                    <div className="mt-4 text-base">暂无可用模型</div>
+                  </div>
+                ),
+              }}
+              style={{ borderRadius: '8px' }}
+            />
+          )}
+        </div>
       </Card>
     </div>
   );

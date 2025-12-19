@@ -4,6 +4,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { OperationLog } from '../log/decorators/operation-log.decorator';
+import { ThrottleStrict } from '../../common/decorators/throttle.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -13,6 +14,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @ThrottleStrict() // 严格限流：10次请求/60秒，防止暴力破解
   @OperationLog('认证', '用户登录')
   @ApiOperation({ summary: '用户登录', description: '使用用户名和密码登录系统' })
   @ApiBody({ type: LoginDto })
@@ -64,6 +66,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @ThrottleStrict() // 严格限流：10次请求/60秒
   @ApiOperation({ summary: '刷新访问令牌', description: '使用刷新令牌获取新的访问令牌' })
   @ApiResponse({
     status: 200,

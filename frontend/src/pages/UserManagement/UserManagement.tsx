@@ -319,24 +319,28 @@ const UserManagement: React.FC = () => {
       
       <Card
         bordered={false}
-        className="shadow-sm"
+        className="shadow-lg border-0 rounded-xl"
+        style={{ borderRadius: '12px' }}
       >
-        <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-800 m-0 flex items-center">
-            <span className="inline-block w-1 h-5 bg-blue-500 mr-3 rounded"></span>
-            用户管理
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-800 m-0 flex items-center">
+            <span className="inline-block w-1 h-5 bg-gradient-to-b from-blue-500 to-blue-600 mr-3 rounded-full"></span>
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              用户管理
+            </span>
           </h2>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleAdd}
+            className="shadow-md hover:shadow-lg transition-all"
           >
             新增用户
           </Button>
         </div>
 
         {/* 查询表单 */}
-        <Card className="mb-4 bg-gray-50" bordered={false}>
+        <Card className="mb-6 bg-gradient-to-r from-gray-50 to-gray-100 border-0 rounded-lg" bordered={false}>
           <Form
             form={queryForm}
             layout="vertical"
@@ -398,7 +402,7 @@ const UserManagement: React.FC = () => {
           dataSource={users}
           rowKey="id"
           loading={loading}
-          className="bg-white"
+          className="bg-white rounded-lg overflow-hidden"
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.limit,
@@ -406,7 +410,9 @@ const UserManagement: React.FC = () => {
             showSizeChanger: false,
             showTotal: (total) => `共 ${total} 条`,
             onChange: (page) => setQueryParams({ ...queryParams, page }),
+            showQuickJumper: true,
           }}
+          style={{ borderRadius: '8px' }}
         />
 
         <Modal

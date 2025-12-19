@@ -19,6 +19,9 @@ import {
   Modal,
   Tooltip,
   Typography,
+  Breadcrumb,
+  Row,
+  Col,
 } from 'antd';
 import {
   SearchOutlined,
@@ -27,6 +30,8 @@ import {
   DeleteOutlined,
   ExclamationCircleOutlined,
   ClearOutlined,
+  HomeOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getLogList, deleteLog, clearAllLogs, type OperationLog } from '@/api/log';
@@ -241,7 +246,10 @@ const OperationLog: React.FC = () => {
               type="link"
               icon={<EyeOutlined />}
               onClick={() => handleViewDetail(record)}
-            />
+              className="h-auto p-0 hover:opacity-80"
+            >
+              查看
+            </Button>
           </Tooltip>
           <Tooltip title="删除">
             <Button
@@ -249,7 +257,10 @@ const OperationLog: React.FC = () => {
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleDelete(record.id)}
-            />
+              className="h-auto p-0 hover:opacity-80"
+            >
+              删除
+            </Button>
           </Tooltip>
         </Space>
       ),
@@ -257,34 +268,84 @@ const OperationLog: React.FC = () => {
   ];
 
   return (
-    <div className="p-6">
-      <Card>
+    <div>
+      <Breadcrumb
+        className="mb-6"
+        items={[
+          {
+            href: '/home',
+            title: <><HomeOutlined className="mr-1" /><span>首页</span></>,
+          },
+          {
+            title: <><FileTextOutlined className="mr-1" /><span>操作日志</span></>,
+          },
+        ]}
+      />
+
+      <Card 
+        bordered={false} 
+        className="shadow-lg border-0 rounded-xl"
+        style={{ borderRadius: '12px' }}
+      >
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-800 m-0 flex items-center">
+            <span className="inline-block w-1 h-5 bg-gradient-to-b from-orange-500 to-orange-600 rounded-full mr-3"></span>
+            <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              操作日志
+            </span>
+          </h2>
+        </div>
+        
         {/* 搜索表单 */}
-        <Form form={form} layout="inline" className="mb-4">
-          <Form.Item name="username" label="用户名" className="mb-4">
-            <Input placeholder="请输入用户名" allowClear />
-          </Form.Item>
-          <Form.Item name="module" label="操作模块" className="mb-4">
-            <Input placeholder="请输入操作模块" allowClear />
-          </Form.Item>
-          <Form.Item className="mb-4">
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleReset}>
-                重置
-              </Button>
-              <Button
-                danger
-                icon={<ClearOutlined />}
-                onClick={handleClearAll}
-              >
-                清空日志
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+        <Card className="mb-6 bg-gradient-to-r from-gray-50 to-gray-100 border-0 rounded-lg" bordered={false}>
+          <Form 
+            form={form} 
+            layout="vertical"
+            onFinish={handleSearch}
+            autoComplete="off"
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12} lg={8}>
+                <Form.Item name="username" label="用户名">
+                  <Input placeholder="请输入用户名" allowClear />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} lg={8}>
+                <Form.Item name="module" label="操作模块">
+                  <Input placeholder="请输入操作模块" allowClear />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={24} lg={8}>
+                <Form.Item label=" " colon={false}>
+                  <Space>
+                    <Button 
+                      type="primary" 
+                      icon={<SearchOutlined />} 
+                      htmlType="submit"
+                      className="shadow-md hover:shadow-lg transition-all"
+                    >
+                      搜索
+                    </Button>
+                    <Button 
+                      icon={<ReloadOutlined />} 
+                      onClick={handleReset}
+                    >
+                      重置
+                    </Button>
+                    <Button
+                      danger
+                      icon={<ClearOutlined />}
+                      onClick={handleClearAll}
+                      className="shadow-md hover:shadow-lg transition-all"
+                    >
+                      清空日志
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Card>
 
         {/* 数据表格 */}
         <Table
@@ -293,17 +354,24 @@ const OperationLog: React.FC = () => {
           loading={loading}
           rowKey="id"
           scroll={{ x: 1600 }}
+          className="bg-white rounded-lg overflow-hidden"
           pagination={{
             current: currentPage,
             pageSize: pageSize,
             total: total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
+            showTotal: (total, range) => (
+              <span className="text-gray-600 font-medium">
+                共 <span className="text-blue-600 font-semibold">{total}</span> 条记录，显示第 {range[0]}-{range[1]} 条
+              </span>
+            ),
             onChange: handleTableChange,
             onShowSizeChange: handleTableChange,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            size: 'default',
           }}
-          className="mt-4 text-sm"
+          style={{ borderRadius: '8px' }}
         />
       </Card>
 

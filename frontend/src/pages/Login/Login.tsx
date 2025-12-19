@@ -29,13 +29,98 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 relative overflow-hidden p-4 sm:p-6">
-      {/* 装饰元素 - 参考图片设计，添加动画效果 */}
-      <div className="absolute top-0 left-0 w-64 h-64 sm:w-96 sm:h-96 bg-blue-400 rounded-full opacity-10 -translate-x-1/2 -translate-y-1/2 blur-2xl sm:blur-3xl animate-pulse [animation-duration:8s]"></div>
-      <div className="absolute bottom-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-indigo-400 rounded-full opacity-10 translate-x-1/2 translate-y-1/2 blur-2xl sm:blur-3xl animate-pulse [animation-duration:10s]"></div>
-      <div className="absolute top-1/3 right-1/4 w-40 h-40 sm:w-64 sm:h-64 bg-purple-400 rounded-full opacity-10 blur-2xl sm:blur-3xl animate-pulse [animation-duration:12s]"></div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4 sm:p-6" style={{
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)',
+      backgroundSize: '400% 400%',
+      animation: 'gradientShift 15s ease infinite'
+    }}>
+      {/* 网格背景 */}
+      <div className="absolute inset-0 opacity-10" style={{
+        backgroundImage: `
+          linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+        `,
+        backgroundSize: '50px 50px'
+      }}></div>
       
-      <Card className="w-full max-w-[420px] bg-white/95 backdrop-blur-sm border border-gray-100 rounded-lg shadow-lg transition-all duration-300 hover:shadow-xl sm:max-w-[400px]" title="管理系统登录">
+      {/* 大型装饰元素 - 左上 */}
+      <div 
+        className="absolute top-0 left-0 w-96 h-96 rounded-full opacity-30 blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(102, 126, 234, 0.6) 0%, transparent 70%)',
+          animation: 'float 20s ease-in-out infinite',
+          transform: 'translate(-30%, -30%)'
+        }}
+      ></div>
+      
+      {/* 大型装饰元素 - 右下 */}
+      <div 
+        className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full opacity-30 blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(0, 242, 254, 0.6) 0%, transparent 70%)',
+          animation: 'float 25s ease-in-out infinite reverse',
+          transform: 'translate(30%, 30%)'
+        }}
+      ></div>
+      
+      {/* 中型装饰元素 - 右上 */}
+      <div 
+        className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full opacity-25 blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(240, 147, 251, 0.5) 0%, transparent 70%)',
+          animation: 'float 18s ease-in-out infinite',
+        }}
+      ></div>
+      
+      {/* 中型装饰元素 - 左下 */}
+      <div 
+        className="absolute bottom-1/4 left-1/4 w-72 h-72 rounded-full opacity-25 blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(118, 75, 162, 0.5) 0%, transparent 70%)',
+          animation: 'float 22s ease-in-out infinite reverse',
+        }}
+      ></div>
+      
+      {/* 小型装饰元素 - 增加层次感 */}
+      <div 
+        className="absolute top-1/2 left-1/3 w-40 h-40 rounded-full opacity-20 blur-2xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(79, 172, 254, 0.4) 0%, transparent 70%)',
+          animation: 'float 15s ease-in-out infinite',
+        }}
+      ></div>
+      
+      {/* 添加CSS动画 */}
+      <style>{`
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -30px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+      `}</style>
+      
+      <Card 
+        className="w-full max-w-[420px] border-0 rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-3xl sm:max-w-[400px] relative z-10" 
+        style={{ 
+          borderRadius: '16px',
+          background: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+        }}
+        title={
+          <div className="text-center py-2">
+            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              管理系统登录
+            </h1>
+            <p className="text-sm text-gray-500">欢迎回来，请登录您的账户</p>
+          </div>
+        }
+      >
         <Form
           name="login"
           initialValues={{ remember: true }}
@@ -45,12 +130,14 @@ const Login: React.FC = () => {
           <Form.Item
             name="username"
             rules={[{ required: true, message: '请输入用户名!' }]}
-            className="mb-4"
+            className="mb-5"
           >
             <Input 
-              prefix={<UserOutlined className="text-gray-400" />} 
-              placeholder="用户名" 
-              className="rounded-lg border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all"
+              prefix={<UserOutlined className="text-blue-500" />} 
+              placeholder="请输入用户名" 
+              size="large"
+              className="rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all h-12"
+              style={{ borderRadius: '12px' }}
             />
           </Form.Item>
 
@@ -60,9 +147,11 @@ const Login: React.FC = () => {
             className="mb-6"
           >
             <Input.Password
-              prefix={<LockOutlined className="text-gray-400" />}
-              placeholder="密码"
-              className="rounded-lg border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all"
+              prefix={<LockOutlined className="text-blue-500" />}
+              placeholder="请输入密码"
+              size="large"
+              className="rounded-xl border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all h-12"
+              style={{ borderRadius: '12px' }}
             />
           </Form.Item>
 
@@ -72,15 +161,20 @@ const Login: React.FC = () => {
               htmlType="submit" 
               loading={Boolean(isLoading.login)}
               block
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-2 rounded-lg transition-all shadow-md hover:shadow-lg"
+              size="large"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-2 rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] font-semibold"
+              style={{ height: '48px' }}
             >
               登录
             </Button>
           </Form.Item>
         </Form>
         
-        <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
-          <p className="text-center text-blue-700 text-sm">默认账号: admin / admin123</p>
+        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/50">
+          <p className="text-center text-blue-700 text-sm font-medium">
+            <span className="inline-block mr-2">💡</span>
+            默认账号: <span className="font-mono font-semibold">admin</span> / <span className="font-mono font-semibold">admin123</span>
+          </p>
         </div>
       </Card>
     </div>

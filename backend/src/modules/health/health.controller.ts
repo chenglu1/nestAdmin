@@ -7,6 +7,7 @@ import {
   MemoryHealthIndicator,
   DiskHealthIndicator,
 } from '@nestjs/terminus';
+import { SkipThrottle } from '../../common/decorators/throttle.decorator';
 
 @ApiTags('health')
 @Controller('health')
@@ -19,6 +20,7 @@ export class HealthController {
   ) {}
 
   @Get()
+  @SkipThrottle() // 健康检查接口跳过限流
   @HealthCheck()
   @ApiOperation({ summary: '系统健康检查' })
   @ApiResponse({ status: 200, description: '系统健康' })

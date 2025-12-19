@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, DatePicker, Button, Space, message } from 'antd';
+import { Card, Row, Col, Statistic, Table, Tag, DatePicker, Button, Space, message, Breadcrumb } from 'antd';
 import {
   ClockCircleOutlined,
   ThunderboltOutlined,
   WarningOutlined,
   CheckCircleOutlined,
+  HomeOutlined,
+  DashboardOutlined,
 } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -127,7 +129,8 @@ const PerformanceMonitor: React.FC = () => {
       title: '方法',
       dataIndex: 'method',
       key: 'method',
-      width: 80,
+      width: 100,
+      fixed: 'left' as const,
       render: (method: string) => <Tag color="blue">{method}</Tag>,
       align: 'center' as const,
     },
@@ -135,18 +138,24 @@ const PerformanceMonitor: React.FC = () => {
       title: '路径',
       dataIndex: 'path',
       key: 'path',
-      ellipsis: true,
-      width: 400,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text: string) => (
+        <span title={text} style={{ maxWidth: '400px', display: 'inline-block' }}>
+          {text}
+        </span>
+      ),
       align: 'left' as const,
     },
     {
       title: '响应时间',
       dataIndex: 'responseTime',
       key: 'responseTime',
-      width: 120,
+      width: 140,
       align: 'center' as const,
       render: (time: number) => (
-        <span className={`${time > 1000 ? 'text-red-500' : 'text-orange-400'}`}>
+        <span className={`font-medium ${time > 1000 ? 'text-red-500' : time > 500 ? 'text-orange-500' : 'text-gray-600'}`}>
           {time.toFixed(2)}ms
         </span>
       ),
@@ -156,7 +165,7 @@ const PerformanceMonitor: React.FC = () => {
       title: '状态码',
       dataIndex: 'statusCode',
       key: 'statusCode',
-      width: 100,
+      width: 120,
       align: 'center' as const,
       render: (code: number) => (
         <Tag color={code >= 500 ? 'red' : code >= 400 ? 'orange' : 'green'}>
@@ -168,34 +177,55 @@ const PerformanceMonitor: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 bg-gray-50 min-h-[calc(100vh-64px)]">
-      <Space direction="vertical" size="large" className="w-full">
+    <div>
+      <Breadcrumb
+        className="mb-6"
+        items={[
+          {
+            href: '/home',
+            title: <><HomeOutlined className="mr-1" /><span>首页</span></>,
+          },
+          {
+            title: <><DashboardOutlined className="mr-1" /><span>性能监控</span></>,
+          },
+        ]}
+      />
+
+      <Space direction="vertical" size="large" className="w-full" style={{ width: '100%' }}>
         {/* 操作栏 */}
-        <Card>
-          <Space>
-            <RangePicker
-              showTime
-              onChange={(dates) => {
-                if (dates) {
-                  setDateRange([
-                    dates[0]!.toISOString(),
-                    dates[1]!.toISOString(),
-                  ]);
-                } else {
-                  setDateRange(null);
-                }
-              }}
-            />
-            <Button type="primary" onClick={fetchData} loading={loading}>
-              刷新数据
-            </Button>
-          </Space>
+        <Card bordered={false} className="shadow-lg border-0 rounded-xl" style={{ borderRadius: '12px' }}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-gray-800 m-0 flex items-center">
+              <span className="inline-block w-1 h-5 bg-gradient-to-b from-indigo-500 to-indigo-600 rounded-full mr-3"></span>
+              <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                性能监控
+              </span>
+            </h2>
+            <Space>
+              <RangePicker
+                showTime
+                onChange={(dates) => {
+                  if (dates) {
+                    setDateRange([
+                      dates[0]!.toISOString(),
+                      dates[1]!.toISOString(),
+                    ]);
+                  } else {
+                    setDateRange(null);
+                  }
+                }}
+              />
+              <Button type="primary" onClick={fetchData} loading={loading} className="shadow-md hover:shadow-lg transition-all">
+                刷新数据
+              </Button>
+            </Space>
+          </div>
         </Card>
 
         {/* 关键指标卡片 */}
-        <Row gutter={16}>
-          <Col span={6}>
-            <Card className="rounded-lg shadow-sm">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="rounded-lg shadow-sm border-0" style={{ borderRadius: '12px' }}>
               <Statistic
                 title="平均响应时间"
                 value={stats?.avgResponseTime || 0}
@@ -206,8 +236,8 @@ const PerformanceMonitor: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card className="rounded-lg shadow-sm">
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="rounded-lg shadow-sm border-0" style={{ borderRadius: '12px' }}>
               <Statistic
                 title="总请求数"
                 value={stats?.totalRequests || 0}
@@ -217,8 +247,8 @@ const PerformanceMonitor: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card className="rounded-lg shadow-sm">
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="rounded-lg shadow-sm border-0" style={{ borderRadius: '12px' }}>
               <Statistic
                 title="错误率"
                 value={stats?.errorRate || 0}
@@ -229,8 +259,8 @@ const PerformanceMonitor: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card className="rounded-lg shadow-sm">
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="rounded-lg shadow-sm border-0" style={{ borderRadius: '12px' }}>
               <Statistic
                 title="最大响应时间"
                 value={stats?.maxResponseTime || 0}
@@ -244,27 +274,48 @@ const PerformanceMonitor: React.FC = () => {
         </Row>
 
         {/* 图表区域 */}
-        <Row gutter={16}>
-          <Col span={12}>
-            <Card className="rounded-lg shadow-sm">
-              <ReactECharts option={responseTimeOption} className="h-[300px]" />
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={12}>
+            <Card className="rounded-lg shadow-sm border-0 overflow-hidden" style={{ borderRadius: '12px' }}>
+              <ReactECharts 
+                option={responseTimeOption} 
+                style={{ height: '300px', width: '100%' }}
+                opts={{ renderer: 'svg' }}
+              />
             </Card>
           </Col>
-          <Col span={12}>
-            <Card className="rounded-lg shadow-sm">
-              <ReactECharts option={requestCountOption} className="h-[300px]" />
+          <Col xs={24} lg={12}>
+            <Card className="rounded-lg shadow-sm border-0 overflow-hidden" style={{ borderRadius: '12px' }}>
+              <ReactECharts 
+                option={requestCountOption} 
+                style={{ height: '300px', width: '100%' }}
+                opts={{ renderer: 'svg' }}
+              />
             </Card>
           </Col>
         </Row>
 
-        <Row gutter={16}>
+        <Row gutter={[16, 16]}>
           <Col span={24}>
-            <Card title="状态码分布" className="rounded-lg shadow-sm h-[350px] flex flex-col">
-              <ReactECharts option={statusCodeOption} className="flex-1" />
+            <Card 
+              title={<span className="font-semibold">状态码分布</span>} 
+              className="rounded-lg shadow-sm border-0 overflow-hidden" 
+              style={{ borderRadius: '12px' }}
+            >
+              <ReactECharts 
+                option={statusCodeOption} 
+                style={{ height: '350px', width: '100%' }}
+                opts={{ renderer: 'svg' }}
+              />
             </Card>
           </Col>
           <Col span={24}>
-            <Card title="Top 10 慢接口" bordered className="rounded-lg shadow-sm h-[500px] flex flex-col">
+            <Card 
+              title={<span className="font-semibold">Top 10 慢接口</span>} 
+              bordered={false}
+              className="rounded-lg shadow-sm border-0 overflow-hidden" 
+              style={{ borderRadius: '12px' }}
+            >
               <Table
                 dataSource={metrics || []}
                 columns={slowEndpointsColumns}
@@ -272,9 +323,8 @@ const PerformanceMonitor: React.FC = () => {
                 size="middle"
                 rowKey={(record) => `${record.method}-${record.path}-${record.createdAt}`}
                 bordered
-                scroll={{ x: 800, y: 400 }}
-                className="min-w-full flex-1 flex flex-col"
-                sticky={false}
+                scroll={{ x: 'max-content', y: 400 }}
+                className="w-full bg-white rounded-lg overflow-hidden"
               />
             </Card>
           </Col>

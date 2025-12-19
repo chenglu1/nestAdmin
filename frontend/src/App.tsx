@@ -18,6 +18,30 @@ const App: React.FC = () => {
         theme={{
           token: {
             colorPrimary: '#1677ff',
+            borderRadius: 8,
+            fontSize: 14,
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            boxShadowSecondary: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          },
+          components: {
+            Card: {
+              borderRadius: 12,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            },
+            Button: {
+              borderRadius: 8,
+              fontWeight: 500,
+            },
+            Input: {
+              borderRadius: 8,
+            },
+            Table: {
+              borderRadius: 8,
+            },
+            Modal: {
+              borderRadius: 12,
+            },
           },
         }}
         componentSize="middle"

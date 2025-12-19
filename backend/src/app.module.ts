@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import { HttpModule } from '@nestjs/axios';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { MenuModule } from './modules/menu/menu.module';
@@ -15,6 +16,7 @@ import { CacheModule } from './modules/cache/cache.module';
 import { ChatanywhereModule } from './modules/chatanywhere/chatanywhere.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
+import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { winstonConfig } from './config/winston.config';
 
 @Module({
@@ -33,6 +35,25 @@ import { winstonConfig } from './config/winston.config';
     
     // HTTP模块，用于外部API调用
     HttpModule,
+    
+    // 请求限流模块
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        return {
+          // 默认限流配置：100次请求/60秒
+          throttlers: [
+            {
+              ttl: 60000, // 时间窗口：60秒
+              limit: 100, // 限制：100次请求
+            },
+          ],
+          // 注意：Redis 存储需要额外配置，当前使用内存存储
+          // 如需分布式限流，可配置 Redis storage
+        };
+      },
+    }),
     
     // 数据库连接
     TypeOrmModule.forRoot({
@@ -75,11 +96,20 @@ import { winstonConfig } from './config/winston.config';
   providers: [
     {
       provide: APP_INTERCEPTOR,
+      useClass: RequestIdInterceptor, // 请求ID拦截器（最先执行）
+    },
+    {
+      provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,
       useClass: PerformanceInterceptor,
+    },
+    // 全局启用请求限流守卫
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })
