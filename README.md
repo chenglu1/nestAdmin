@@ -177,6 +177,35 @@ cd ../frontend
 # 使用 Nginx 或静态服务器托管 dist/ 目录
 ```
 
+### 方式 4: GitHub Actions 自动部署 🚀
+
+项目已配置 GitHub Actions，推送到 `main` 分支会自动部署到生产服务器。
+
+**快速配置：**
+
+1. **在服务器上运行快速配置脚本**：
+   ```bash
+   # 下载并运行配置脚本
+   curl -fsSL https://raw.githubusercontent.com/chenglu1/nestAdmin/main/scripts/setup-server.sh | bash
+   # 或手动执行
+   bash scripts/setup-server.sh
+   ```
+
+2. **配置 GitHub Secrets**：
+   - 进入仓库 Settings → Secrets and variables → Actions
+   - 添加以下 Secrets：
+     - `SERVER_HOST`: 服务器 IP 地址
+     - `SERVER_USER`: SSH 用户名（通常是 root）
+     - `SERVER_SSH_KEY`: SSH 私钥内容
+     - `SERVER_SSH_PORT`: SSH 端口（可选，默认 22）
+
+3. **推送到 main 分支触发部署**：
+   ```bash
+   git push origin main
+   ```
+
+**详细配置说明请查看：** [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
+
 ## 📋 常用命令
 
 ### 使用 pnpm (推荐)
