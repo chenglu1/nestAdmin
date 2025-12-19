@@ -9,8 +9,7 @@ import {
   SafetyOutlined,
   MenuOutlined,
   FileTextOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined
+  ArrowUpOutlined
 } from '@ant-design/icons';
 import { getUserProfile, type UserProfile } from '@/api/auth';
 
