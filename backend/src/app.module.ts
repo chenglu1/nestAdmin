@@ -40,7 +40,7 @@ import { winstonConfig } from './config/winston.config';
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (_configService: ConfigService) => {
         return {
           // 默认限流配置：100次请求/60秒
           throttlers: [
