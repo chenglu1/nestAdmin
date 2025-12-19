@@ -58,14 +58,41 @@ pull_code() {
 
 # 函数: 检查 pnpm
 check_pnpm() {
+    # 重新加载 PATH（确保能找到新安装的命令）
+    export PATH="$PATH:/usr/local/bin:/usr/bin"
+    
     if ! command -v pnpm &> /dev/null; then
         log "📦 pnpm 未安装，正在安装..."
-        npm install -g pnpm || {
-            # 如果 npm 安装失败，尝试使用 corepack
-            corepack enable || error "无法启用 corepack"
-            corepack prepare pnpm@latest --activate || error "无法安装 pnpm"
-        }
-        log "✅ pnpm 安装成功"
+        
+        # 优先使用 corepack（Node.js 16+ 自带）
+        if command -v corepack &> /dev/null; then
+            log "使用 corepack 安装 pnpm..."
+            corepack enable || warn "corepack enable 失败，尝试其他方法"
+            corepack prepare pnpm@latest --activate || {
+                log "corepack 安装失败，使用 npm 安装..."
+                npm install -g pnpm || error "pnpm 安装失败"
+            }
+        else
+            # 使用 npm 安装
+            npm install -g pnpm || error "pnpm 安装失败"
+        fi
+        
+        # 重新加载 PATH
+        export PATH="$PATH:$(npm config get prefix)/bin"
+        
+        # 验证安装
+        if command -v pnpm &> /dev/null; then
+            log "✅ pnpm 安装成功: $(pnpm --version)"
+        else
+            # 尝试使用完整路径
+            PNPM_PATH=$(npm config get prefix)/bin/pnpm
+            if [ -f "$PNPM_PATH" ]; then
+                log "✅ pnpm 已安装，使用路径: $PNPM_PATH"
+                alias pnpm="$PNPM_PATH"
+            else
+                error "pnpm 安装后仍无法找到命令"
+            fi
+        fi
     else
         log "✅ pnpm 已安装: $(pnpm --version)"
     fi
@@ -77,6 +104,13 @@ update_backend_deps() {
     cd "$BACKEND_DIR"
     
     check_pnpm
+    
+    # 确保能找到 pnpm 命令
+    if ! command -v pnpm &> /dev/null; then
+        # 尝试使用 npm 的全局 bin 路径
+        export PATH="$PATH:$(npm config get prefix)/bin"
+    fi
+    
     pnpm install --prod || error "后端依赖安装失败"
     
     log "✅ 后端依赖更新成功"
@@ -98,6 +132,13 @@ update_frontend_deps() {
     cd "$FRONTEND_DIR"
     
     check_pnpm
+    
+    # 确保能找到 pnpm 命令
+    if ! command -v pnpm &> /dev/null; then
+        # 尝试使用 npm 的全局 bin 路径
+        export PATH="$PATH:$(npm config get prefix)/bin"
+    fi
+    
     pnpm install --prod || error "前端依赖安装失败"
     
     log "✅ 前端依赖更新成功"
