@@ -160,12 +160,8 @@ export class AuthController {
           refreshToken = String(req.headers['x-refresh-token']);
           this.logger.debug('从请求头获取到刷新令牌');
         } else {
-          this.logger.debug('未找到刷新令牌');
-          // 如果没有找到刷新令牌，直接返回400错误
-          return res.status(HttpStatus.BAD_REQUEST).json({
-            code: 400,
-            message: '缺少刷新令牌',
-          });
+          this.logger.debug('未找到刷新令牌（可能已过期或被清除），继续登出流程');
+          // 即使没有找到刷新令牌，也允许登出（可能是Cookie已过期或清除）
         }
         
         // 尝试验证和吊销单个令牌
@@ -234,13 +230,21 @@ export class AuthController {
         });
       }
       
-      // 清除响应Cookie
+      // 清除响应Cookie（尝试多个可能的路径，确保清除成功）
       try {
+        // 清除 /api/auth/refresh 路径的 Cookie
         res.clearCookie('refreshToken', {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           path: '/api/auth/refresh'
+        });
+        // 清除根路径的 Cookie（兼容性处理）
+        res.clearCookie('refreshToken', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/'
         });
         this.logger.debug('已清除响应中的refreshToken Cookie');
       } catch (e) {
