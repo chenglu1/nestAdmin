@@ -98,9 +98,9 @@ check_pnpm() {
     fi
 }
 
-# 函数: 更新后端依赖
+# 函数: 更新后端依赖（构建时需要开发依赖）
 update_backend_deps() {
-    log "📦 更新后端依赖..."
+    log "📦 更新后端依赖（包括开发依赖，用于构建）..."
     cd "$BACKEND_DIR"
     
     check_pnpm
@@ -115,8 +115,9 @@ update_backend_deps() {
     export CI=true
     export HUSKY=0  # 禁用 husky（生产环境不需要 git hooks）
     
+    # 构建时需要开发依赖（如 @nestjs/cli），所以安装所有依赖
     # 使用 --ignore-scripts 跳过 prepare 等脚本（更安全）
-    pnpm install --prod --ignore-scripts || error "后端依赖安装失败"
+    pnpm install --ignore-scripts || error "后端依赖安装失败"
     
     log "✅ 后端依赖更新成功"
 }
@@ -134,9 +135,9 @@ build_backend() {
     log "✅ 后端编译成功"
 }
 
-# 函数: 更新前端依赖
+# 函数: 更新前端依赖（构建时需要开发依赖）
 update_frontend_deps() {
-    log "📦 更新前端依赖..."
+    log "📦 更新前端依赖（包括开发依赖，用于构建）..."
     cd "$FRONTEND_DIR"
     
     check_pnpm
@@ -151,8 +152,9 @@ update_frontend_deps() {
     export CI=true
     export HUSKY=0  # 禁用 husky（生产环境不需要 git hooks）
     
+    # 构建时需要开发依赖（如 vite），所以安装所有依赖
     # 使用 --ignore-scripts 跳过 prepare 等脚本（更安全）
-    pnpm install --prod --ignore-scripts || error "前端依赖安装失败"
+    pnpm install --ignore-scripts || error "前端依赖安装失败"
     
     log "✅ 前端依赖更新成功"
 }
