@@ -55,6 +55,11 @@ jobs:
             .env
             .env.local
             .env.*.local
+            .pnpm-store
+            .vite
+            .cache
+            coverage
+            *.tsbuildinfo
 
       - name: 🚀 Deploy to server
         if: steps.check-changes.outputs.changed == 'true'

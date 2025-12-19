@@ -115,9 +115,19 @@ update_backend_deps() {
     export CI=true
     export HUSKY=0  # 禁用 husky（生产环境不需要 git hooks）
     
+    # 配置 pnpm 使用缓存（加速安装）
+    export PNPM_STORE_DIR="${PNPM_STORE_DIR:-~/.pnpm-store}"
+    mkdir -p "$PNPM_STORE_DIR"
+    
     # 构建时需要开发依赖（如 @nestjs/cli），所以安装所有依赖
+    # 使用 --frozen-lockfile 加速（如果 lockfile 没变，跳过解析）
     # 使用 --ignore-scripts 跳过 prepare 等脚本（更安全）
-    pnpm install --ignore-scripts || error "后端依赖安装失败"
+    # 使用 --prefer-offline 优先使用缓存
+    pnpm install --frozen-lockfile --prefer-offline --ignore-scripts || {
+        # 如果 frozen-lockfile 失败（lockfile 有变化），使用普通安装
+        log "⚠️  Lockfile 有变化，执行完整安装..."
+        pnpm install --prefer-offline --ignore-scripts || error "后端依赖安装失败"
+    }
     
     log "✅ 后端依赖更新成功"
 }
@@ -152,9 +162,19 @@ update_frontend_deps() {
     export CI=true
     export HUSKY=0  # 禁用 husky（生产环境不需要 git hooks）
     
+    # 配置 pnpm 使用缓存（加速安装）
+    export PNPM_STORE_DIR="${PNPM_STORE_DIR:-~/.pnpm-store}"
+    mkdir -p "$PNPM_STORE_DIR"
+    
     # 构建时需要开发依赖（如 vite），所以安装所有依赖
+    # 使用 --frozen-lockfile 加速（如果 lockfile 没变，跳过解析）
     # 使用 --ignore-scripts 跳过 prepare 等脚本（更安全）
-    pnpm install --ignore-scripts || error "前端依赖安装失败"
+    # 使用 --prefer-offline 优先使用缓存
+    pnpm install --frozen-lockfile --prefer-offline --ignore-scripts || {
+        # 如果 frozen-lockfile 失败（lockfile 有变化），使用普通安装
+        log "⚠️  Lockfile 有变化，执行完整安装..."
+        pnpm install --prefer-offline --ignore-scripts || error "前端依赖安装失败"
+    }
     
     log "✅ 前端依赖更新成功"
 }
@@ -313,10 +333,28 @@ main() {
         health_check
     else
         # PM2 模式需要构建代码
-        update_backend_deps
-        build_backend
-        update_frontend_deps
-        build_frontend
+        # 优化：并行安装依赖（如果可能）
+        log "📦 开始安装依赖..."
+        update_backend_deps &
+        BACKEND_DEPS_PID=$!
+        update_frontend_deps &
+        FRONTEND_DEPS_PID=$!
+        
+        # 等待依赖安装完成
+        wait $BACKEND_DEPS_PID || error "后端依赖安装失败"
+        wait $FRONTEND_DEPS_PID || error "前端依赖安装失败"
+        
+        # 并行构建（如果服务器资源充足）
+        log "🔨 开始构建..."
+        build_backend &
+        BACKEND_BUILD_PID=$!
+        build_frontend &
+        FRONTEND_BUILD_PID=$!
+        
+        # 等待构建完成
+        wait $BACKEND_BUILD_PID || error "后端构建失败"
+        wait $FRONTEND_BUILD_PID || error "前端构建失败"
+        
         restart_services
         health_check
     fi
