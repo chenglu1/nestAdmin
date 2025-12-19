@@ -126,149 +126,77 @@ export class AuthController {
   @ApiResponse({ status: 401, description: '未授权' })
   @OperationLog('auth', '用户登出')
   async logout(@Request() req: ExpressRequest, @Res() res: ExpressResponse) {
-    // 添加详细的请求上下文日志，便于问题排查
-    const requestContext = {
-      method: req?.method,
-      url: req?.originalUrl,
-      hasBody: !!req?.body,
-      hasHeaders: !!req?.headers,
-      hasCookies: !!req?.cookies,
-      hasUser: !!req?.user,
-    };
+    this.logger.debug(`登出请求: ${req?.method} ${req?.originalUrl}`);
     
-    this.logger.debug(`登出请求开始: ${JSON.stringify(requestContext)}`);
+    // 尝试获取刷新令牌（可选，即使没有也允许登出）
+    let refreshToken: string | undefined;
     
-    try {
-      // 尝试获取刷新令牌 - 增加更详细的日志
-      let refreshToken: string | undefined;
-      try {
-        // 详细记录每个可能的令牌来源
-        const cookieTokenExists = req && req.cookies && typeof req.cookies === 'object' && req.cookies.refreshToken !== undefined;
-        const bodyTokenExists = req && req.body && typeof req.body === 'object' && req.body.refreshToken !== undefined;
-        const headerTokenExists = req && req.headers && typeof req.headers === 'object' && req.headers['x-refresh-token'] !== undefined;
-        
-        this.logger.debug(`令牌来源检查 - Cookie: ${cookieTokenExists}, Body: ${bodyTokenExists}, Header: ${headerTokenExists}`);
-        
-        // 更严格的安全检查，确保每个属性都存在
-        if (cookieTokenExists && req.cookies) {
-          refreshToken = String(req.cookies.refreshToken);
-          this.logger.debug('从Cookie获取到刷新令牌');
-        } else if (bodyTokenExists && req.body) {
-          refreshToken = String(req.body.refreshToken);
-          this.logger.debug('从请求体获取到刷新令牌');
-        } else if (headerTokenExists && req.headers) {
-          refreshToken = String(req.headers['x-refresh-token']);
-          this.logger.debug('从请求头获取到刷新令牌');
-        } else {
-          this.logger.debug('未找到刷新令牌（可能已过期或被清除），继续登出流程');
-          // 即使没有找到刷新令牌，也允许登出（可能是Cookie已过期或清除）
-        }
-        
-        // 尝试验证和吊销单个令牌
-        if (refreshToken) {
-          try {
-            await this.authService.revokeRefreshToken(refreshToken);
-            this.logger.debug('成功吊销单个刷新令牌');
-          } catch (e) {
-            this.logger.debug('吊销单个令牌失败，但继续登出流程', (e as any)?.message || 'Unknown error');
-          }
-        }
-      } catch (e) {
-        this.logger.error('处理令牌时出错', {
-          errorType: e?.constructor?.name,
-          errorMessage: (e as any)?.message,
-          stack: (e as any)?.stack
-        });
-      }
-      
-      // 尝试从用户信息中吊销所有令牌
-      try {
-        if (req?.user) {
-          const user = req.user as any;
-          this.logger.debug(`用户信息存在: ${user?.username || '未知用户'}`);
-          
-          const possibleIds = [
-            user.id,
-            user.userId,
-            user.sub,
-            user?.user?.id,
-            user?.data?.id
-          ];
-          
-          // 查找有效的用户ID
-          let userId: number | undefined;
-          for (const id of possibleIds) {
-            if (id !== undefined && id !== null) {
-              const numId = typeof id === 'string' ? parseInt(id, 10) : id;
-              if (typeof numId === 'number' && !isNaN(numId) && numId > 0) {
-                userId = numId;
-                this.logger.debug(`找到有效的用户ID: ${userId}`);
-                break;
-              }
-            }
-          }
-          
-          // 吊销用户所有令牌
-          if (userId) {
-            try {
-              await this.authService.revokeAllUserRefreshTokens(userId);
-              this.logger.debug(`成功吊销用户ID ${userId} 的所有令牌`);
-            } catch (e) {
-              this.logger.warn(`吊销用户ID ${userId} 的所有令牌失败，但继续登出流程`, (e as any)?.message || 'Unknown error');
-            }
-          } else {
-            this.logger.warn('无法从用户信息中获取有效的用户ID');
-          }
-        } else {
-          this.logger.warn('请求中没有用户信息');
-        }
-      } catch (e) {
-        this.logger.error('处理用户信息时出错', {
-          errorType: e?.constructor?.name,
-          errorMessage: (e as any)?.message,
-          stack: (e as any)?.stack
-        });
-      }
-      
-      // 清除响应Cookie（尝试多个可能的路径，确保清除成功）
-      try {
-        // 清除 /api/auth/refresh 路径的 Cookie
-        res.clearCookie('refreshToken', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          path: '/api/auth/refresh'
-        });
-        // 清除根路径的 Cookie（兼容性处理）
-        res.clearCookie('refreshToken', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          path: '/'
-        });
-        this.logger.debug('已清除响应中的refreshToken Cookie');
-      } catch (e) {
-        this.logger.debug('清除Cookie失败，但继续登出流程', (e as any)?.message || 'Unknown error');
-      }
-      
-      // 总是返回成功，无论内部操作是否成功
-      this.logger.debug('登出请求完成');
-      return res.status(200).json({
-        code: 200,
-        message: '注销成功'
-      });
-    } catch (error: any) {
-      // 捕获所有未预期的错误，但仍然返回成功
-      this.logger.error('登出过程中发生错误', {
-        errorType: error?.constructor?.name,
-        errorMessage: error?.message,
-        stack: error?.stack
-      });
-      return res.status(200).json({
-        code: 200,
-        message: '注销成功'
-      });
+    // 从 Cookie 获取
+    if (req?.cookies?.refreshToken) {
+      refreshToken = String(req.cookies.refreshToken);
+      this.logger.debug('从Cookie获取到刷新令牌');
     }
+    // 从请求体获取
+    else if (req?.body?.refreshToken) {
+      refreshToken = String(req.body.refreshToken);
+      this.logger.debug('从请求体获取到刷新令牌');
+    }
+    // 从请求头获取
+    else if (req?.headers?.['x-refresh-token']) {
+      refreshToken = String(req.headers['x-refresh-token']);
+      this.logger.debug('从请求头获取到刷新令牌');
+    } else {
+      this.logger.debug('未找到刷新令牌，继续登出流程（允许无token登出）');
+    }
+    
+    // 如果有刷新令牌，尝试吊销
+    if (refreshToken) {
+      try {
+        await this.authService.revokeRefreshToken(refreshToken);
+        this.logger.debug('成功吊销刷新令牌');
+      } catch (e) {
+        this.logger.warn('吊销刷新令牌失败，但继续登出流程', (e as any)?.message);
+      }
+    }
+    
+    // 尝试从用户信息中吊销所有令牌（如果有用户信息）
+    if (req?.user) {
+      try {
+        const user = req.user as any;
+        const userId = user?.userId || user?.id || user?.sub;
+        if (userId) {
+          await this.authService.revokeAllUserRefreshTokens(userId);
+          this.logger.debug(`成功吊销用户ID ${userId} 的所有令牌`);
+        }
+      } catch (e) {
+        this.logger.warn('吊销用户所有令牌失败，但继续登出流程', (e as any)?.message);
+      }
+    }
+    
+    // 清除 Cookie（尝试多个路径）
+    try {
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/api/auth/refresh'
+      });
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/'
+      });
+      this.logger.debug('已清除refreshToken Cookie');
+    } catch (e) {
+      this.logger.warn('清除Cookie失败，但继续登出流程', (e as any)?.message);
+    }
+    
+    // 总是返回成功
+    return res.status(200).json({
+      code: 200,
+      message: '注销成功'
+    });
   }
 }
 
