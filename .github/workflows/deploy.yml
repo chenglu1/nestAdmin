@@ -34,6 +34,28 @@ jobs:
             fi
           fi
 
+      - name: 📤 Upload code to server
+        if: steps.check-changes.outputs.changed == 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT || 22 }}
+          source: "."
+          target: "/www/wwwroot/nestAdmin"
+          strip_components: 0
+          exclude: |
+            node_modules
+            dist
+            logs
+            .git
+            .github
+            *.log
+            .env
+            .env.local
+            .env.*.local
+
       - name: 🚀 Deploy to server
         if: steps.check-changes.outputs.changed == 'true'
         uses: appleboy/ssh-action@v1.0.3
@@ -61,31 +83,9 @@ jobs:
             
             # 检查项目目录是否存在
             if [ ! -d "$PROJECT_ROOT" ]; then
-              echo -e "${RED}❌ 错误: 项目目录不存在: $PROJECT_ROOT${NC}"
-              exit 1
+              echo -e "${YELLOW}项目目录不存在，创建目录...${NC}"
+              mkdir -p "$PROJECT_ROOT"
             fi
-            
-            # 进入项目目录
-            cd "$PROJECT_ROOT"
-            
-            # 拉取最新代码
-            echo -e "${YELLOW}📥 拉取最新代码...${NC}"
-            git fetch origin main || {
-              echo -e "${RED}❌ Git fetch 失败${NC}"
-              exit 1
-            }
-            
-            git checkout main || {
-              echo -e "${RED}❌ Git checkout 失败${NC}"
-              exit 1
-            }
-            
-            git pull origin main || {
-              echo -e "${RED}❌ Git pull 失败${NC}"
-              exit 1
-            }
-            
-            echo -e "${GREEN}✅ 代码拉取成功${NC}"
             
             # 检查部署脚本是否存在
             if [ ! -f "$DEPLOY_SCRIPT" ]; then
@@ -98,7 +98,7 @@ jobs:
             
             # 设置部署模式（默认使用 pm2，如果使用 Docker 则设置为 docker）
             export DEPLOY_MODE="${DEPLOY_MODE:-pm2}"
-            export SKIP_GIT_PULL="true"  # GitHub Actions 已经拉取了代码
+            export SKIP_GIT_PULL="true"  # GitHub Actions 已经拉取了代码，跳过服务器端的 git pull
             
             # 执行部署脚本
             echo -e "${YELLOW}🔨 执行部署脚本 (模式: $DEPLOY_MODE)...${NC}"

@@ -43,6 +43,12 @@ pull_code() {
     log "📥 开始拉取最新代码..."
     cd "$PROJECT_ROOT"
     
+    # 检查是否是 git 仓库
+    if [ ! -d ".git" ]; then
+        warn "项目目录不是 git 仓库，跳过代码拉取"
+        return 0
+    fi
+    
     git fetch origin || error "Git fetch 失败"
     git checkout "$BRANCH" || error "Git checkout 失败"
     git pull origin "$BRANCH" || error "Git pull 失败"
