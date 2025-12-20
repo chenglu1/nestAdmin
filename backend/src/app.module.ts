@@ -14,6 +14,7 @@ import { HealthModule } from './modules/health/health.module';
 import { PerformanceModule } from './modules/performance/performance.module';
 import { CacheModule } from './modules/cache/cache.module';
 import { ChatanywhereModule } from './modules/chatanywhere/chatanywhere.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
@@ -92,6 +93,7 @@ import { winstonConfig } from './config/winston.config';
     HealthModule,
     PerformanceModule,
     ChatanywhereModule,
+    DashboardModule,
   ],
   providers: [
     {

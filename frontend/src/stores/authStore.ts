@@ -415,6 +415,20 @@ export const useAuthStore = create<AuthState>()(
       
       // 从持久化存储恢复后，重新设置token自动刷新
       onRehydrateStorage: () => (state) => {
+        // 🔧 关键修复：先确保所有 loading 状态都是 false
+        // 防止从 localStorage 恢复时带出旧的 loading 状态，导致一直转圈
+        setTimeout(() => {
+          useAuthStore.setState({
+            isLoading: {
+              login: false,
+              logout: false,
+              refreshTokens: false,
+              refreshUserProfile: false,
+              fetchMenus: false,
+            }
+          });
+        }, 50);
+        
         if (state?.token && state?.isAuthenticated) {
           // 延迟一下执行，确保store已经完全初始化
           setTimeout(() => {
@@ -422,23 +436,53 @@ export const useAuthStore = create<AuthState>()(
             // 恢复后检查token是否仍然有效
             if (state.token) {
               const decodedToken = store.parseJwt(state.token);
-              if (decodedToken && decodedToken.exp * 1000 > Date.now()) {
+              const now = Date.now();
+              const tokenExpiry = decodedToken?.exp ? decodedToken.exp * 1000 : 0;
+              
+              // 如果 token 仍然有效（还有至少 1 分钟有效期）
+              if (decodedToken && tokenExpiry > now + 60000) {
                 store.scheduleTokenRefresh(state.token);
-                // 可选：恢复后刷新用户完整信息
-                store.refreshUserProfile().catch(() => {
-                  // 刷新失败不做特殊处理，因为token仍然有效
-                });
-                
                 // 启动会话监控
                 store.startSessionMonitoring();
+                
+                // 可选：恢复后刷新用户完整信息（静默失败，不影响页面加载）
+                // 使用更长的延迟，确保页面已经渲染完成
+                setTimeout(() => {
+                  store.refreshUserProfile().catch((error) => {
+                    // 刷新失败不做特殊处理，因为token仍然有效
+                    // 如果失败，会在 refreshUserProfile 内部重置 loading 状态
+                    console.warn('恢复用户信息失败（不影响使用）:', error);
+                  });
+                }, 1000);
               } else {
-                // token已过期，尝试刷新
-                store.refreshTokens().catch(() => {
-                  // 刷新失败会自动登出
-                });
+                // token已过期或即将过期，尝试刷新
+                // ⚠️ 注意：如果 Cookie 中的 refreshToken 也过期了，这里会失败
+                console.log('Token 已过期，尝试刷新...');
+                setTimeout(() => {
+                  store.refreshTokens().catch((error) => {
+                    // 🔧 关键修复：刷新失败时，确保清除认证状态和 loading 状态
+                    // 这通常是因为 Cookie 中的 refreshToken 也过期了
+                    console.warn('刷新 token 失败（可能是 Cookie 中的 refreshToken 已过期），清除认证状态:', error);
+                    // 确保 loading 状态被重置，避免一直转圈
+                    useAuthStore.setState({
+                      isAuthenticated: false,
+                      token: null,
+                      refreshToken: null,
+                      user: null,
+                      menus: [],
+                      isLoading: {
+                        login: false,
+                        logout: false,
+                        refreshTokens: false,
+                        refreshUserProfile: false,
+                        fetchMenus: false,
+                      }
+                    });
+                  });
+                }, 1000);
               }
             }
-          }, 100);
+          }, 200);
         }
       },
       

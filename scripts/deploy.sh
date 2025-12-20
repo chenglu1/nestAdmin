@@ -353,7 +353,7 @@ main() {
     if [ -n "$SKIP_GIT_PULL" ]; then
         log "⏭️  跳过代码拉取（已在 GitHub Actions 中完成）"
     else
-        pull_code
+    pull_code
     fi
     
     # Docker 模式直接重启容器（代码已在容器内构建）
@@ -384,8 +384,8 @@ main() {
         wait $BACKEND_BUILD_PID || error "后端构建失败"
         wait $FRONTEND_BUILD_PID || error "前端构建失败"
         
-        restart_services
-        health_check
+    restart_services
+    health_check
     fi
     
     log "=========================================="

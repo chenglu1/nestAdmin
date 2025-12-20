@@ -12,13 +12,17 @@ import {
   ArrowUpOutlined
 } from '@ant-design/icons';
 import { getUserProfile, type UserProfile } from '@/api/auth';
+import { getDashboardStatistics, type DashboardStatistics } from '@/api/dashboard';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statistics, setStatistics] = useState<DashboardStatistics | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     fetchUserProfile();
+    fetchStatistics();
   }, []);
 
   const fetchUserProfile = async () => {
@@ -29,6 +33,24 @@ const Dashboard: React.FC = () => {
       console.error('获取用户信息失败:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStatistics = async () => {
+    try {
+      const response = await getDashboardStatistics();
+      setStatistics(response.data);
+    } catch (error) {
+      console.error('获取统计数据失败:', error);
+      // 如果获取失败，使用默认值
+      setStatistics({
+        userCount: 0,
+        roleCount: 0,
+        menuCount: 0,
+        logCount: 0,
+      });
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -53,7 +75,8 @@ const Dashboard: React.FC = () => {
           }}>
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.9)' }}>总用户数</span>}
-              value={1128}
+              value={statistics?.userCount ?? 0}
+              loading={statsLoading}
               prefix={<TeamOutlined style={{ color: 'rgba(255,255,255,0.9)' }} />}
               valueStyle={{ color: '#fff', fontWeight: 600 }}
               suffix={<ArrowUpOutlined style={{ color: '#52c41a', fontSize: '14px' }} />}
@@ -67,7 +90,8 @@ const Dashboard: React.FC = () => {
           }}>
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.9)' }}>角色数量</span>}
-              value={24}
+              value={statistics?.roleCount ?? 0}
+              loading={statsLoading}
               prefix={<SafetyOutlined style={{ color: 'rgba(255,255,255,0.9)' }} />}
               valueStyle={{ color: '#fff', fontWeight: 600 }}
             />
@@ -80,7 +104,8 @@ const Dashboard: React.FC = () => {
           }}>
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.9)' }}>菜单数量</span>}
-              value={48}
+              value={statistics?.menuCount ?? 0}
+              loading={statsLoading}
               prefix={<MenuOutlined style={{ color: 'rgba(255,255,255,0.9)' }} />}
               valueStyle={{ color: '#fff', fontWeight: 600 }}
             />
@@ -93,7 +118,8 @@ const Dashboard: React.FC = () => {
           }}>
             <Statistic
               title={<span style={{ color: 'rgba(255,255,255,0.9)' }}>操作日志</span>}
-              value={8562}
+              value={statistics?.logCount ?? 0}
+              loading={statsLoading}
               prefix={<FileTextOutlined style={{ color: 'rgba(255,255,255,0.9)' }} />}
               valueStyle={{ color: '#fff', fontWeight: 600 }}
               suffix={<ArrowUpOutlined style={{ color: '#fff', fontSize: '14px' }} />}
