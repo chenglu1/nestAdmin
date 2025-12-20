@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "NestJS Backend for Admin System",
-  "main": "dist/main.js",
+  "main": "dist/src/main.js",
   "scripts": {
     "build": "nest build",
     "start": "ts-node src/main.ts",
