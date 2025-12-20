@@ -345,6 +345,9 @@ main() {
     # 检查项目目录是否存在
     [ -d "$PROJECT_ROOT" ] || error "项目目录不存在: $PROJECT_ROOT"
     
+    # 清理临时文件（在部署前）
+    cleanup_before_deploy
+    
     # 如果设置了 SKIP_GIT_PULL（GitHub Actions 已经拉取了代码），则跳过拉取
     # 否则执行代码拉取
     if [ -n "$SKIP_GIT_PULL" ]; then
