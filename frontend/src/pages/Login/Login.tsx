@@ -2,6 +2,7 @@ import React from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { AxiosError } from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 // 使用Tailwind CSS替代Less文件
 
@@ -11,6 +12,9 @@ const Login: React.FC = () => {
 
   const onFinish = async (values: { username: string; password: string }) => {
     try {
+      // 清除之前的错误
+      useAuthStore.setState({ error: null });
+      
       await login(values.username, values.password);
       
       message.success({
@@ -23,7 +27,23 @@ const Login: React.FC = () => {
         navigate('/home');
       }, 800);
     } catch (err) {
-      message.error(error || '登录失败，请检查网络或账号密码');
+      // 错误已经在 request 拦截器中统一处理（登录接口会静默处理，不显示提示）
+      // 这里只需要从错误对象中提取消息用于组件内显示
+      let errorMessage = '登录失败，请检查网络或账号密码';
+      
+      if (err instanceof AxiosError) {
+        // Axios 错误
+        const apiResponse = err.response?.data as { message?: string } | undefined;
+        errorMessage = apiResponse?.message || err.message || error || errorMessage;
+      } else if (err instanceof Error) {
+        // 普通错误
+        errorMessage = err.message || error || errorMessage;
+      } else if (error) {
+        // 使用 store 中的错误信息
+        errorMessage = error;
+      }
+      
+      message.error(errorMessage);
       console.error('Login error:', err);
     }
   };

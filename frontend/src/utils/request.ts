@@ -1,10 +1,9 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
-import { message } from 'antd';
 import { useAuthStore } from '@/stores/authStore';
+import { handleError, handleBusinessError, handleAuthError, type ApiResponse } from './errorHandler';
 
 // 聊天API配置
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const MESSAGE_DURATION = 3; // 秒
 
 // 聊天API配置
 const CHAT_API_URL = `${API_BASE_URL}/chatanywhere/chat`;
@@ -41,23 +40,6 @@ export interface ChatResponse {
   }[];
   system_fingerprint: string;
 }
-
-// 响应数据接口
-interface ApiResponse {
-  message?: string;
-  code?: number;
-}
-
-// HTTP 状态码对应的错误信息映射
-const HTTP_ERROR_MESSAGES: Record<number, (data?: ApiResponse) => string> = {
-  400: (data) => data?.message || '请求参数错误',
-  401: (data) => data?.message || '用户名或密码错误',
-  403: (data) => data?.message || '没有权限访问此资源',
-  404: () => '请求的资源不存在',
-  500: (data) => data?.message || '服务器内部错误,请联系管理员',
-  502: () => '网关错误,请稍后重试',
-  503: () => '服务暂时不可用,请稍后重试',
-};
 
 // 创建 axios 实例
 const request = axios.create({
@@ -134,80 +116,6 @@ async function doRefreshToken(): Promise<string> {
   }
 }
 
-/**
- * 处理 401 错误 - 区分登录接口和其他接口
- */
-async function handle401Error(error: AxiosError): Promise<string> {
-  const isLoginApi = error.config?.url?.includes('/auth/login');
-  const isRefreshApi = error.config?.url?.includes('/auth/refresh');
-  
-  if (isLoginApi) {
-    return (error.response?.data as ApiResponse)?.message || '用户名或密码错误';
-  }
-  
-  if (isRefreshApi) {
-    // 刷新令牌本身也失败了，说明refresh token已过期或无效
-    try {
-      const { logout } = useAuthStore.getState();
-      if (typeof logout === 'function') {
-        logout();
-      }
-    } catch (error) {
-      console.error('Failed to logout after refresh token error:', error);
-    }
-    
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, 1500);
-    
-    return '登录已过期,请重新登录';
-  }
-  
-  // 尝试刷新令牌（refreshToken通过Cookie自动传递）
-  try {
-    // 使用Promise来确保只刷新一次
-    if (!refreshTokenPromise) {
-      refreshTokenPromise = doRefreshToken();
-    }
-    
-    await refreshTokenPromise;
-    return 'Token 已自动刷新，请重试';
-  } finally {
-    // 无论成功失败，都清除刷新Promise
-    refreshTokenPromise = null;
-  }
-}
-
-/**
- * 获取 HTTP 错误信息
- */
-function getErrorMessage(error: AxiosError): string {
-  if (error.code === 'ECONNABORTED') {
-    return '请求超时,请稍后重试';
-  }
-  
-  if (error.code === 'ERR_NETWORK') {
-    return '网络连接失败,请检查网络或确认后端服务是否启动';
-  }
-  
-  if (error.response) {
-    const { status, data } = error.response;
-    
-    if (status === 401) {
-      // 401错误由响应拦截器异步处理，这里返回默认错误信息
-      return (data as ApiResponse)?.message || '登录已过期,请重新登录';
-    }
-    
-    const getMessage = HTTP_ERROR_MESSAGES[status];
-    return getMessage ? getMessage(data as ApiResponse) : `请求失败 (状态码: ${status})`;
-  }
-  
-  if (error.request) {
-    return '服务器无响应,请检查网络连接或后端服务是否正常运行';
-  }
-  
-  return error.message || '请求配置错误';
-}
 
 // 响应拦截器
 request.interceptors.response.use(
@@ -219,14 +127,23 @@ request.interceptors.response.use(
       return res;
     }
     
-    // 显示错误信息
-    const errorMsg = res.message || '请求失败';
-    message.error({ content: errorMsg, duration: MESSAGE_DURATION });
+    // 处理业务错误（code !== 200）
+    const errorInfo = handleBusinessError(res);
     
-    // 构造错误对象传递给错误处理器
-    const error = new Error(errorMsg) as Error & { response?: { status?: number; data?: ApiResponse }, config?: object };
+    // 构造错误对象
+    const error = new Error(errorInfo.message) as Error & { 
+      response?: { status?: number; data?: ApiResponse }; 
+      config?: object;
+      errorInfo?: typeof errorInfo;
+    };
     error.response = { status: res.code, data: res };
     error.config = response.config;
+    error.errorInfo = errorInfo;
+    
+    // 统一错误处理（会自动判断是否需要显示提示）
+    handleError(error, {
+      showMessage: true, // 显示错误提示
+    });
     
     return Promise.reject(error);
   },
@@ -253,10 +170,20 @@ request.interceptors.response.use(
         
         // 重试原始请求
         return request(originalRequest);
-      } catch {
-        // 刷新token失败，处理错误
-        const errorMessage = await handle401Error(error);
-        message.error({ content: errorMessage, duration: MESSAGE_DURATION });
+      } catch (refreshError) {
+        // 刷新token失败，处理认证错误
+        await handleAuthError(error);
+        
+        // 静默处理刷新token的错误，避免重复提示
+        handleError(refreshError as AxiosError, {
+          silent: true,
+        });
+        
+        // 显示认证错误提示
+        handleError(error, {
+          showMessage: true,
+        });
+        
         return Promise.reject(error);
       } finally {
         refreshTokenPromise = null;
@@ -264,8 +191,10 @@ request.interceptors.response.use(
     }
     
     // 处理其他错误
-    const errorMessage = getErrorMessage(error);
-    message.error({ content: errorMessage, duration: MESSAGE_DURATION });
+    handleError(error, {
+      showMessage: true,
+    });
+    
     return Promise.reject(error);
   }
 );
