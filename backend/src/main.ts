@@ -56,6 +56,7 @@ async function bootstrap() {
     .addTag('health', '健康检查')
     .addTag('performance', '性能监控')
     .addTag('chatanywhere', 'ChatAnywhere集成')
+    .addTag('dashboard', '仪表板统计')
     .addBearerAuth(
       {
         type: 'http',
