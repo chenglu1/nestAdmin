@@ -43,6 +43,27 @@ warn() {
     echo -e "${YELLOW}[WARNING] $1${NC}" | tee -a "$LOG_FILE"
 }
 
+# 函数: 清理临时文件和缓存（在部署前执行）
+cleanup_before_deploy() {
+    log "🧹 清理临时文件和缓存..."
+    
+    # 清理 TypeScript 构建信息
+    find "$PROJECT_ROOT" -name "*.tsbuildinfo" -type f -delete 2>/dev/null || true
+    
+    # 清理旧的日志文件（保留最近3天）
+    if [ -d "${PROJECT_ROOT}/logs" ]; then
+        find "${PROJECT_ROOT}/logs" -name "*.log" -type f -mtime +3 -delete 2>/dev/null || true
+    fi
+    
+    # 清理 PM2 日志（如果日志文件太大）
+    if command -v pm2 &> /dev/null; then
+        # 只清理，不删除所有日志
+        pm2 flush 2>/dev/null || true
+    fi
+    
+    log "✅ 临时文件清理完成"
+}
+
 # 函数: 拉取最新代码
 pull_code() {
     log "📥 开始拉取最新代码..."
